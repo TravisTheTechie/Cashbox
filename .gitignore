@@ -1,0 +1,9 @@
+bin
+obj
+
+*.user
+*.cached
+*.suo
+*.ReSharper
+
+_ReSharper.*
