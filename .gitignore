@@ -1,9 +1,16 @@
 bin
 obj
+test-results
+
+.DS_Store
+TestResult.xml
 
 *.user
+*.userprefs
 *.cached
 *.suo
 *.ReSharper
+*.pidb
+*.swp
 
 _ReSharper.*
