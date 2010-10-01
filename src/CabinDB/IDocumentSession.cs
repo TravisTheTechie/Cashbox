@@ -22,6 +22,6 @@ namespace CabinDB
 		T RetrieveWithDefault<T>(string key, Func<T> defaultCreation) where T : class;
 		void Store<T>(string key, T document) where T : class;
 		IEnumerable<T> List<T>() where T : class;
-		void Delete(string key);
+		void Delete<T>(string key) where T : class;
 	}
 }

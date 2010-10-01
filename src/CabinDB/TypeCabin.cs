@@ -47,5 +47,10 @@ namespace CabinDB
 		{
 			return _untypedStore.Values.ToList().ConvertAll(x => x as T);
 		}
+
+		public void Delete(string key)
+		{
+			_untypedStore.Remove(key);
+		}
 	}
 }

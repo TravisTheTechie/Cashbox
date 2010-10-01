@@ -33,24 +33,70 @@ namespace CabinDB.Specs
 	public class A_value_is_storable :
 		CabinDocumentSessionBase
 	{
-		string _key = "empty";
-		
+		const string Key = "empty";
+
 		[When]
 		public void A_value_is_stored()
 		{
-			Session.Store(_key, new TestDocument1());
+			Session.Store(Key, new TestDocument1());
 		}
 
 		[Then]
 		public void It_should_be_retrievable()
 		{
-			Session.Retrieve<TestDocument1>(_key).ShouldNotBeNull();
+			Session.Retrieve<TestDocument1>(Key).ShouldNotBeNull();
 		}
 
 		[Then]
 		public void List_should_have_one_value()
 		{
 			Session.List<TestDocument1>().Count().ShouldEqual(1);
+		}
+	}
+
+
+	[Scenario]
+	public class Default_retrieves_store_values_when_missing :
+		CabinDocumentSessionBase
+	{
+		const string Key = "za-za";
+
+		[When]
+		public void A_miss_with_retrieve_with_default()
+		{
+			Session.Retrieve<TestDocument1>(Key).ShouldBeNull();
+
+			Session.RetrieveWithDefault(Key, () => new TestDocument1());
+		}
+
+		[Then]
+		public void It_should_be_retrievable()
+		{
+			Session.Retrieve<TestDocument1>(Key).ShouldNotBeNull();
+		}
+	}
+
+
+	[Scenario]
+	public class Delete_will_remove_an_existing_value :
+		CabinDocumentSessionBase
+	{
+		const string Key = "di-da";
+
+		[When]
+		public void An_existing_value_is_deleted()
+		{
+			Session.Store(Key, new TestDocument1());
+
+			Session.Retrieve<TestDocument1>(Key).ShouldNotBeNull();
+
+			Session.Delete<TestDocument1>(Key);
+		}
+
+		[Then]
+		public void It_should_have_a_miss_when_retrieving()
+		{
+			Session.Retrieve<TestDocument1>(Key).ShouldBeNull();
 		}
 	}
 }

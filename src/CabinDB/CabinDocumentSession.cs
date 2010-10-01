@@ -41,7 +41,20 @@ namespace CabinDB
 
 		public T RetrieveWithDefault<T>(string key, Func<T> defaultCreation) where T : class
 		{
-			throw new NotImplementedException();
+			TypeCabin typeCabin;
+
+			lock (_store)
+			{
+				if (!_store.ContainsKey(typeof(T)))
+					_store.Add(typeof(T), new TypeCabin(typeof(T)));
+
+				typeCabin = _store[typeof(T)];
+
+				if (!typeCabin.Contains(key))
+					typeCabin.Add(key, defaultCreation());
+
+				return typeCabin[key] as T;
+			}
 		}
 
 		public void Store<T>(string key, T document) where T : class
@@ -73,9 +86,22 @@ namespace CabinDB
 			}
 		}
 
-		public void Delete(string key)
+		public void Delete<T>(string key) where T : class
 		{
-			throw new NotImplementedException();
+			TypeCabin typeCabin;
+
+			lock (_store)
+			{
+				if (!_store.ContainsKey(typeof(T)))
+					return;
+
+				typeCabin = _store[typeof(T)];
+
+				if (!typeCabin.Contains(key))
+					return;
+
+				typeCabin.Delete(key);
+			}
 		}
 	}
 }
