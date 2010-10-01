@@ -56,6 +56,7 @@
     <Compile Include="CabinDocumentSessionSpecs.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TestDocument1.cs" />
+    <Compile Include="MaskedBandit.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CabinDB\CabinDB.csproj">
