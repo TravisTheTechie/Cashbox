@@ -15,23 +15,14 @@ namespace CabinDB
 	using System;
 	using System.Collections.Generic;
 	using System.Linq;
+	using Magnum.Serialization;
 
-
+	
 	public class TypeCabin
 	{
-		readonly Dictionary<string, object> _untypedStore = new Dictionary<string, object>();
-		Type _type;
-
-		public TypeCabin(Type type)
-		{
-			_type = type;
-		}
-
-		public object this[string key]
-		{
-			get { return _untypedStore[key]; }
-			set { _untypedStore[key] = value; }
-		}
+		readonly Dictionary<string, string> _untypedStore = new Dictionary<string, string>();
+		[ThreadStatic]
+		static FastTextSerializer _serializer = new FastTextSerializer();
 
 		public bool Contains(string key)
 		{
@@ -40,12 +31,22 @@ namespace CabinDB
 
 		public void Add<T>(string key, T document)
 		{
-			_untypedStore.Add(key, document);
+			_untypedStore.Add(key, _serializer.Serialize<T>(document));
 		}
 
 		public IList<T> GetValues<T>() where T : class
 		{
-			return _untypedStore.Values.ToList().ConvertAll(x => x as T);
+			return _untypedStore.Values.ToList().ConvertAll(x => _serializer.Deserialize<T>(x));
+		}
+		
+		public T Retrieve<T>(string key) where T : class
+		{
+			return _serializer.Deserialize<T>(_untypedStore[key]);
+		}
+		
+		public void Store<T>(string key, T document)
+		{
+			_untypedStore[key] = _serializer.Serialize<T>(document);
 		}
 
 		public void Delete(string key)

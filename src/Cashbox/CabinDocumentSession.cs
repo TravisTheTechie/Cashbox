@@ -35,7 +35,7 @@ namespace CabinDB
 				if (!typeCabin.Contains(key))
 					return default(T);
 
-				return typeCabin[key] as T;
+				return typeCabin.Retrieve<T>(key);
 			}
 		}
 
@@ -46,14 +46,14 @@ namespace CabinDB
 			lock (_store)
 			{
 				if (!_store.ContainsKey(typeof(T)))
-					_store.Add(typeof(T), new TypeCabin(typeof(T)));
+					_store.Add(typeof(T), new TypeCabin());
 
 				typeCabin = _store[typeof(T)];
 
 				if (!typeCabin.Contains(key))
 					typeCabin.Add(key, defaultCreation());
 
-				return typeCabin[key] as T;
+				return typeCabin.Retrieve<T>(key);
 			}
 		}
 
@@ -64,14 +64,14 @@ namespace CabinDB
 			lock (_store)
 			{
 				if (!_store.ContainsKey(typeof(T)))
-					_store.Add(typeof(T), new TypeCabin(typeof(T)));
+					_store.Add(typeof(T), new TypeCabin());
 
 				typeCabin = _store[typeof(T)];
 
 				if (!typeCabin.Contains(key))
 					typeCabin.Add(key, document);
 				else
-					typeCabin[key] = document;
+					typeCabin.Store<T>(key, document);
 			}
 		}
 
