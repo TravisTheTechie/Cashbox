@@ -8,8 +8,8 @@
     <ProjectGuid>{3E2F077E-A3C3-4F70-96EA-8ED3B8C93C06}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>CabinDB</RootNamespace>
-    <AssemblyName>CabinDB</AssemblyName>
+    <RootNamespace>Cashbox</RootNamespace>
+    <AssemblyName>Cashbox</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -32,7 +32,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Magnum">
-      <HintPath>..\lib\Magnum\Magnum.dll</HintPath>
+      <HintPath>..\..\lib\Magnum\Magnum.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />

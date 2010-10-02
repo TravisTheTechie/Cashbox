@@ -8,8 +8,8 @@
     <ProjectGuid>{5DBED87D-610C-48E8-BD4D-1733200217F7}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>CabinDB.Specs</RootNamespace>
-    <AssemblyName>CabinDB.Specs</AssemblyName>
+    <RootNamespace>Cashbox.Specs</RootNamespace>
+    <AssemblyName>Cashbox.Specs</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -32,13 +32,13 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="log4net">
-      <HintPath>..\lib\log4net\log4net.dll</HintPath>
+      <HintPath>..\..\lib\log4net\log4net.dll</HintPath>
     </Reference>
     <Reference Include="Magnum.TestFramework">
-      <HintPath>..\lib\Magnum.TestFramework\Magnum.TestFramework.dll</HintPath>
+      <HintPath>..\..\lib\Magnum.TestFramework\Magnum.TestFramework.dll</HintPath>
     </Reference>
     <Reference Include="nunit.framework">
-      <HintPath>..\lib\NUnit\nunit.framework.dll</HintPath>
+      <HintPath>..\..\lib\NUnit\nunit.framework.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -54,7 +54,7 @@
     <Compile Include="TestDocument1.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\CabinDB\CabinDB.csproj">
+    <ProjectReference Include="..\Cashbox\Cashbox.csproj">
       <Project>{3E2F077E-A3C3-4F70-96EA-8ED3B8C93C06}</Project>
       <Name>CabinDB</Name>
     </ProjectReference>
