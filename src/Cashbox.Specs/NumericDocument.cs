@@ -10,18 +10,19 @@
 // under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR 
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the 
 // specific language governing permissions and limitations under the License.
-namespace Cashbox
+namespace Cashbox.Specs
 {
 	using System;
-	using System.Collections.Generic;
 
 
-	public interface IDocumentSession
+	public class NumericDocument
 	{
-		T Retrieve<T>(string key) where T : class;
-		T RetrieveWithDefault<T>(string key, Func<T> defaultCreation) where T : class;
-		void Store<T>(string key, T document) where T : class;
-		IEnumerable<T> List<T>() where T : class;
-		void Delete<T>(string key) where T : class;
+		public NumericDocument()
+		{
+			CreatedDate = DateTime.Now;
+		}
+
+		public int Number { get; set; }
+		public DateTime CreatedDate { get; set; }
 	}
 }

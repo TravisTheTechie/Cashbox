@@ -10,13 +10,33 @@
 // under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR 
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the 
 // specific language governing permissions and limitations under the License.
-namespace CabinDB.Specs
+namespace Cashbox.Specs
 {
-	using Magnum.TestFramework;
+	using System;
+	using System.Diagnostics;
+	using NUnit.Framework;
 
 
-	[Scenario]
+	[TestFixture]
 	public class MaskedBandit
 	{
+		[Test]
+		public void Insert_10k_records()
+		{
+			IDocumentSession session = new DocumentSession();
+
+			Stopwatch sw = new Stopwatch();
+			sw.Start();
+			for (int i = 0; i < 10000; i++)
+			{
+				session.Store(i.ToString(), new NumericDocument
+					{
+						Number = i
+					});
+			}
+			sw.Stop();
+
+			Console.WriteLine("10k inserts: {0}ms", sw.ElapsedMilliseconds);
+		}
 	}
 }

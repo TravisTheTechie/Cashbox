@@ -10,28 +10,28 @@
 // under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR 
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the 
 // specific language governing permissions and limitations under the License.
-namespace CabinDB.Specs
+namespace Cashbox.Specs
 {
 	using System.Linq;
 	using Magnum.TestFramework;
 
 	
 	[Scenario]
-	public class CabinDocumentSessionBase
+	public class DocumentSessionBase
 	{
-		protected CabinDocumentSession Session { get; set; }
+		protected DocumentSession Session { get; set; }
 
 		[Given]
 		public void A_cabin_session()
 		{
-			Session = new CabinDocumentSession();
+			Session = new DocumentSession();
 		}
 	}
 
 
 	[Scenario]
 	public class A_value_is_storable :
-		CabinDocumentSessionBase
+		DocumentSessionBase
 	{
 		const string Key = "empty";
 
@@ -57,7 +57,7 @@ namespace CabinDB.Specs
 
 	[Scenario]
 	public class Default_retrieves_store_values_when_missing :
-		CabinDocumentSessionBase
+		DocumentSessionBase
 	{
 		const string Key = "za-za";
 
@@ -79,7 +79,7 @@ namespace CabinDB.Specs
 
 	[Scenario]
 	public class Delete_will_remove_an_existing_value :
-		CabinDocumentSessionBase
+		DocumentSessionBase
 	{
 		const string Key = "di-da";
 
