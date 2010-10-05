@@ -19,42 +19,43 @@ namespace Cashbox
 	
 	public class TypeCabin
 	{
-		readonly Dictionary<string, string> _untypedStore = new Dictionary<string, string>();
-		readonly FastTextSerializer _serializer;
+		static readonly FastTextSerializer _serializer = new FastTextSerializer();
 
-		public TypeCabin(FastTextSerializer serializer)
+		public Dictionary<string, string> Documents { get; set; }
+
+		public TypeCabin()
 		{
-			_serializer = serializer;
+			Documents = new Dictionary<string, string>();
 		}
 
 		public bool Contains(string key)
 		{
-			return _untypedStore.ContainsKey(key);
+			return Documents.ContainsKey(key);
 		}
 
 		public void Add<T>(string key, T document)
 		{
-			_untypedStore.Add(key, _serializer.Serialize<T>(document));
+			Documents.Add(key, _serializer.Serialize<T>(document));
 		}
 
 		public IList<T> GetValues<T>() where T : class
 		{
-			return _untypedStore.Values.ToList().ConvertAll(x => _serializer.Deserialize<T>(x));
+			return Documents.Values.ToList().ConvertAll(x => _serializer.Deserialize<T>(x));
 		}
 		
 		public T Retrieve<T>(string key) where T : class
 		{
-			return _serializer.Deserialize<T>(_untypedStore[key]);
+			return _serializer.Deserialize<T>(Documents[key]);
 		}
 		
 		public void Store<T>(string key, T document)
 		{
-			_untypedStore[key] = _serializer.Serialize<T>(document);
+			Documents[key] = _serializer.Serialize<T>(document);
 		}
 
 		public void Delete(string key)
 		{
-			_untypedStore.Remove(key);
+			Documents.Remove(key);
 		}
 	}
 }

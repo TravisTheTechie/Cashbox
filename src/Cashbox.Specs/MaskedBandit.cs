@@ -23,7 +23,8 @@ namespace Cashbox.Specs
 		[Test]
 		public void Insert_10k_records()
 		{
-			using (IDocumentSession session = DocumentSessionFactory.Create("10k_insert.store"))
+			var insertStoreName = "10k_insert.store";
+			using (IDocumentSession session = DocumentSessionFactory.Create(insertStoreName))
 			{
 				Stopwatch sw = new Stopwatch();
 				sw.Start();
@@ -37,6 +38,16 @@ namespace Cashbox.Specs
 				sw.Stop();
 
 				Console.WriteLine("10k inserts: {0}ms", sw.ElapsedMilliseconds);
+			}
+
+			using(var session = DocumentSessionFactory.Create(insertStoreName))
+			{
+				for (int i = 0; i < 10000; i++)
+				{
+					var result = session.Retrieve<NumericDocument>(i.ToString()).Number;
+
+					Assert.That(result, Is.EqualTo(i));
+				}
 			}
 		}
 	}

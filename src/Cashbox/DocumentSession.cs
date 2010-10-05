@@ -28,11 +28,21 @@ namespace Cashbox
 		public DocumentSession(string filename)
 		{
 			_filename = filename;
+			Load();
+		}
+
+		void Load()
+		{
 			if (File.Exists(_filename))
 			{
 				string value = File.ReadAllText(_filename);
 				_store = _serializer.Deserialize<Dictionary<Type, TypeCabin>>(value);
 			}
+		}
+
+		void Save()
+		{
+			File.WriteAllText(_filename, _serializer.Serialize(_store));
 		}
 
 		public T Retrieve<T>(string key) where T : class
@@ -60,12 +70,15 @@ namespace Cashbox
 			lock (_store)
 			{
 				if (!_store.ContainsKey(typeof(T)))
-					_store.Add(typeof(T), new TypeCabin(_serializer));
+					_store.Add(typeof(T), new TypeCabin());
 
 				typeCabin = _store[typeof(T)];
 
 				if (!typeCabin.Contains(key))
+				{
 					typeCabin.Add(key, defaultCreation());
+					Save();
+				}
 
 				return typeCabin.Retrieve<T>(key);
 			}
@@ -78,7 +91,7 @@ namespace Cashbox
 			lock (_store)
 			{
 				if (!_store.ContainsKey(typeof(T)))
-					_store.Add(typeof(T), new TypeCabin(_serializer));
+					_store.Add(typeof(T), new TypeCabin());
 
 				typeCabin = _store[typeof(T)];
 
@@ -86,6 +99,8 @@ namespace Cashbox
 					typeCabin.Add(key, document);
 				else
 					typeCabin.Store(key, document);
+
+				Save();
 			}
 		}
 
@@ -115,12 +130,14 @@ namespace Cashbox
 					return;
 
 				typeCabin.Delete(key);
+
+				Save();
 			}
 		}
 
 		public void Dispose()
 		{
-			File.WriteAllText(_filename, _serializer.Serialize(_store));
+			Save();
 		}
 	}
 }
