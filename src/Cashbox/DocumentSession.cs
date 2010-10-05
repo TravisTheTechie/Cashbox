@@ -14,12 +14,26 @@ namespace Cashbox
 {
 	using System;
 	using System.Collections.Generic;
+	using System.IO;
+	using Magnum.Serialization;
 
 
 	public class DocumentSession :
 		IDocumentSession
 	{
-		readonly Dictionary<Type, TypeCabin> _store = new Dictionary<Type, TypeCabin>();
+		Dictionary<Type, TypeCabin> _store = new Dictionary<Type, TypeCabin>();
+		readonly static FastTextSerializer _serializer = new FastTextSerializer();
+		readonly string _filename;
+
+		public DocumentSession(string filename)
+		{
+			_filename = filename;
+			if (File.Exists(_filename))
+			{
+				string value = File.ReadAllText(_filename);
+				_store = _serializer.Deserialize<Dictionary<Type, TypeCabin>>(value);
+			}
+		}
 
 		public T Retrieve<T>(string key) where T : class
 		{
@@ -46,7 +60,7 @@ namespace Cashbox
 			lock (_store)
 			{
 				if (!_store.ContainsKey(typeof(T)))
-					_store.Add(typeof(T), new TypeCabin());
+					_store.Add(typeof(T), new TypeCabin(_serializer));
 
 				typeCabin = _store[typeof(T)];
 
@@ -64,14 +78,14 @@ namespace Cashbox
 			lock (_store)
 			{
 				if (!_store.ContainsKey(typeof(T)))
-					_store.Add(typeof(T), new TypeCabin());
+					_store.Add(typeof(T), new TypeCabin(_serializer));
 
 				typeCabin = _store[typeof(T)];
 
 				if (!typeCabin.Contains(key))
 					typeCabin.Add(key, document);
 				else
-					typeCabin.Store<T>(key, document);
+					typeCabin.Store(key, document);
 			}
 		}
 
@@ -102,6 +116,11 @@ namespace Cashbox
 
 				typeCabin.Delete(key);
 			}
+		}
+
+		public void Dispose()
+		{
+			File.WriteAllText(_filename, _serializer.Serialize(_store));
 		}
 	}
 }

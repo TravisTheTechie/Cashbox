@@ -23,20 +23,21 @@ namespace Cashbox.Specs
 		[Test]
 		public void Insert_10k_records()
 		{
-			IDocumentSession session = new DocumentSession();
-
-			Stopwatch sw = new Stopwatch();
-			sw.Start();
-			for (int i = 0; i < 10000; i++)
+			using (IDocumentSession session = DocumentSessionFactory.Create("10k_insert.store"))
 			{
-				session.Store(i.ToString(), new NumericDocument
-					{
-						Number = i
-					});
-			}
-			sw.Stop();
+				Stopwatch sw = new Stopwatch();
+				sw.Start();
+				for (int i = 0; i < 10000; i++)
+				{
+					session.Store(i.ToString(), new NumericDocument
+						{
+							Number = i
+						});
+				}
+				sw.Stop();
 
-			Console.WriteLine("10k inserts: {0}ms", sw.ElapsedMilliseconds);
+				Console.WriteLine("10k inserts: {0}ms", sw.ElapsedMilliseconds);
+			}
 		}
 	}
 }

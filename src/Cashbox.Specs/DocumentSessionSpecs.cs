@@ -24,7 +24,7 @@ namespace Cashbox.Specs
 		[Given]
 		public void A_cabin_session()
 		{
-			Session = new DocumentSession();
+			Session = new DocumentSession("session.specs.store");
 		}
 	}
 

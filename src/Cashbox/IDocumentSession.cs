@@ -16,7 +16,8 @@ namespace Cashbox
 	using System.Collections.Generic;
 
 
-	public interface IDocumentSession
+	public interface IDocumentSession :
+		IDisposable
 	{
 		T Retrieve<T>(string key) where T : class;
 		T RetrieveWithDefault<T>(string key, Func<T> defaultCreation) where T : class;

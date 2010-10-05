@@ -12,7 +12,6 @@
 // specific language governing permissions and limitations under the License.
 namespace Cashbox
 {
-	using System;
 	using System.Collections.Generic;
 	using System.Linq;
 	using Magnum.Serialization;
@@ -21,8 +20,12 @@ namespace Cashbox
 	public class TypeCabin
 	{
 		readonly Dictionary<string, string> _untypedStore = new Dictionary<string, string>();
-		[ThreadStatic]
-		static FastTextSerializer _serializer = new FastTextSerializer();
+		readonly FastTextSerializer _serializer;
+
+		public TypeCabin(FastTextSerializer serializer)
+		{
+			_serializer = serializer;
+		}
 
 		public bool Contains(string key)
 		{
