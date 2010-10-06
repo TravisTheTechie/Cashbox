@@ -28,10 +28,10 @@ namespace Cashbox
 
             _needLockin = act =>
             {
-                //lock (_store)
-                //{
+                lock (_store)
+                {
                     act();
-                //}
+                }
             };
 
             _subscription = _input.Connect(config =>
@@ -45,6 +45,9 @@ namespace Cashbox
 
                 config.AddConsumerOf<LoadFromDisk>()
                     .UsingConsumer(msg => Load());
+
+                config.AddConsumerOf<Request<LoadFromDisk>>()
+                    .UsingConsumer(LoadWithAcknolwedgement);
 
                 config.AddConsumerOf<Request<GetWithKey>>()
                     .UsingConsumer(RetrieveValue);
@@ -61,6 +64,12 @@ namespace Cashbox
                 config.AddConsumerOf<SaveToDisk>()
                     .UsingConsumer(msg => Save());
             });
+        }
+
+        void LoadWithAcknolwedgement(Request<LoadFromDisk> message)
+        {
+            Load();
+            message.ResponseChannel.Send(new ReturnValue<string>());
         }
 
         void RetrieveListFromType(Request<GetListWithType> message)

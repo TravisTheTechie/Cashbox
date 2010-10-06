@@ -50,6 +50,7 @@
     <Compile Include="Messages\IoProducer.cs" />
     <Compile Include="Messages\KeyBasedMessage.cs" />
     <Compile Include="Messages\KeyValuePairBasedMessage.cs" />
+    <Compile Include="Messages\LoadedFromDisk.cs" />
     <Compile Include="Messages\LoadFromDisk.cs" />
     <Compile Include="Messages\GetListWithType.cs" />
     <Compile Include="IDocumentSession.cs" />

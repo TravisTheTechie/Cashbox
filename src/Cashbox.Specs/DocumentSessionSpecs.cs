@@ -27,6 +27,12 @@ namespace Cashbox.Specs
 		{
 			Session = new DocumentSession("session.specs.store");
 		}
+
+        [Finally]
+        public void Dispose_of_stuff()
+        {
+            Session.Dispose();
+        }
 	}
 
 
@@ -54,11 +60,11 @@ namespace Cashbox.Specs
 			Session.List<TestDocument1>().Count().ShouldEqual(1);
 		}
 
-		[After]
-		public void Clear_out_list_values()
-		{
-			Session.Delete<TestDocument1>(Key);
-		}
+        [After]
+        public void Clear_out_list_values()
+        {
+            Session.Delete<TestDocument1>(Key);
+        }
 	}
 
 
@@ -110,12 +116,6 @@ namespace Cashbox.Specs
 		public void It_should_have_a_miss_when_retrieving()
 		{
 			Session.Retrieve<TestDocument1>(Key).ShouldBeNull();
-		}
-
-		[After]
-		public void Clear_out_list_values()
-		{
-			Session.Delete<TestDocument1>(Key);
 		}
 	}
 }

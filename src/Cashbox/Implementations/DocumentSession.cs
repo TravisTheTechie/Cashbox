@@ -20,38 +20,24 @@ namespace Cashbox.Implementations
     using Messages;
 
 
-    public class DocumentSession : 
+    public class DocumentSession :
         DocumentSessionBase,
         IDocumentSession
     {
-        public DocumentSession(string filename) :
-            base(filename)
+        public DocumentSession(string filename)
+            : base(filename)
         {
-            Send(new LoadFromDisk());
+            MakeRequest<string, LoadFromDisk>(new LoadFromDisk());
         }
 
         public T Retrieve<T>(string key) where T : class
         {
             string realKey = KeyConverter<T>(key);
-            string text = null;
 
-            var channel = new ChannelAdapter();
-            var response = new Future<string>();
-
-            using (channel.Connect(config =>
+            string text = MakeRequest<string, GetWithKey>(new GetWithKey
                 {
-                    config.AddConsumerOf<ReturnValue<string>>()
-                        .UsingConsumer(msg => response.Complete(msg.Value));
-                }))
-            {
-                Request(new GetWithKey
-                    {
-                        Key = realKey
-                    }, channel);
-
-                response.WaitUntilCompleted(1.Minutes());
-                text = response.Value;
-            }
+                    Key = realKey
+                });
 
             if (text == null)
                 return default(T);
@@ -64,24 +50,12 @@ namespace Cashbox.Implementations
             string realKey = KeyConverter<T>(key);
             string text = null;
             string defaultValue = Serializer.Serialize(defaultCreation());
-            var response = new Future<string>();
-            var channel = new ChannelAdapter();
 
-            using (channel.Connect(config =>
+            text = MakeRequest<string, GetWithKeyAndDefault>(new GetWithKeyAndDefault
                 {
-                    config.AddConsumerOf<ReturnValue<string>>()
-                        .UsingConsumer(msg => response.Complete(msg.Value));
-                }))
-            {
-                Request(new GetWithKeyAndDefault
-                    {
-                        Key = realKey,
-                        DefaultValue = defaultValue
-                    }, channel);
-
-                response.WaitUntilCompleted(1.Minutes());
-                text = response.Value;
-            }
+                    Key = realKey,
+                    DefaultValue = defaultValue
+                });
 
             return Serializer.Deserialize<T>(text);
         }
@@ -103,23 +77,10 @@ namespace Cashbox.Implementations
             string keyStart = KeyConverter<T>(string.Empty);
             List<string> values = null;
 
-            var response = new Future<List<string>>();
-            var channel = new ChannelAdapter();
-
-            using (channel.Connect(config =>
+            values = MakeRequest<List<string>, GetListWithType>(new GetListWithType
                 {
-                    config.AddConsumerOf<ReturnValue<List<string>>>()
-                        .UsingConsumer(msg => response.Complete(msg.Value));
-                }))
-            {
-                Request(new GetListWithType
-                    {
-                        Key = keyStart
-                    }, channel);
-
-                response.WaitUntilCompleted(1.Minutes());
-                values = response.Value;
-            }
+                    Key = keyStart
+                });
 
             if (values == null)
                 values = new List<string>();
@@ -140,6 +101,24 @@ namespace Cashbox.Implementations
         static string KeyConverter<T>(string key)
         {
             return "{0}___{1}".FormatWith(typeof(T).FullName, key);
+        }
+
+        T MakeRequest<T, TMessage>(TMessage message)
+        {
+            var response = new Future<T>();
+            var channel = new ChannelAdapter();
+
+            using (channel.Connect(config =>
+                {
+                    config.AddConsumerOf<ReturnValue<T>>()
+                        .UsingConsumer(msg => response.Complete(msg.Value));
+                }))
+            {
+                Request(message, channel);
+
+                response.WaitUntilCompleted(1.Minutes());
+                return response.Value;
+            }
         }
     }
 }

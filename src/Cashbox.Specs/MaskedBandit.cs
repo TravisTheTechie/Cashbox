@@ -12,56 +12,83 @@
 // specific language governing permissions and limitations under the License.
 namespace Cashbox.Specs
 {
-	using System;
-	using System.Diagnostics;
-	using System.IO;
-	using NUnit.Framework;
+    using System;
+    using System.Diagnostics;
+    using System.IO;
+    using System.Linq;
+    using Magnum.TestFramework;
+    using NUnit.Framework;
 
 
-	[TestFixture]
-	public class MaskedBandit
-	{
-	    const string InsertStoreName = "10k_insert.store";
+    [TestFixture]
+    public class MaskedBandit
+    {
+        [Test]
+        public void Robbin_the_bank()
+        {
+            using (IDocumentSession session = DocumentSessionFactory.Create(InsertStoreName))
+            {
+                var sw = new Stopwatch();
+                sw.Start();
+                for (int i = 0; i < EventCount; i++)
+                {
+                    session.Store(i.ToString(), new NumericDocument
+                        {
+                            Number = i
+                        });
+                }
+                sw.Stop();
 
-		[TestFixtureSetUp]
-		public void CleanUpExistingFiles()
-		{
-			if (File.Exists(InsertStoreName))
-			{
-				File.Delete(InsertStoreName);
-			}
-		}
+                Console.WriteLine("10k inserts: {0}ms", sw.ElapsedMilliseconds);
+            }
 
-		const int EventCount = 10000;
+            using (IDocumentSession session = DocumentSessionFactory.Create(InsertStoreName))
+            {
+                var sw = new Stopwatch();
+                sw.Start();
+                for (int i = 0; i < EventCount; i++)
+                {
+                    var document = session.Retrieve<NumericDocument>(i.ToString())
+                        ;
+                    int result = document.Number;
 
-		[Test]
-		public void Insert_10k_records()
-		{
-			using (IDocumentSession session = DocumentSessionFactory.Create(InsertStoreName))
-			{
-				var sw = new Stopwatch();
-				sw.Start();
-				for (int i = 0; i < EventCount; i++)
-				{
-					session.Store(i.ToString(), new NumericDocument
-						{
-							Number = i
-						});
-				}
-				sw.Stop();
+                    Assert.That(result, Is.EqualTo(i));
+                }
 
-				Console.WriteLine("10k inserts: {0}ms", sw.ElapsedMilliseconds);
-			}
+                sw.Stop();
 
-			using(var session = DocumentSessionFactory.Create(InsertStoreName))
-			{
-				for (int i = 0; i < EventCount; i++)
-				{
-					var result = session.Retrieve<NumericDocument>(i.ToString()).Number;
+                Console.WriteLine("10k reads: {0}ms", sw.ElapsedMilliseconds);
+            }
 
-					Assert.That(result, Is.EqualTo(i));
-				}
-			}
-		}
-	}
+            using (IDocumentSession session = DocumentSessionFactory.Create(InsertStoreName))
+            {
+                var rand = new Random();
+
+                var sw = new Stopwatch();
+                sw.Start();
+                for (int i = 0; i < EventCount/100; i++)
+                {
+                    string key = rand.Next(EventCount - 1).ToString();
+                    session.Delete<NumericDocument>(key);
+                }
+                sw.Stop();
+                int count = session.List<NumericDocument>().Count();
+                Console.WriteLine("{1} (of {2} attempted) deletes: {0}ms", sw.ElapsedMilliseconds, EventCount - count,
+                                  EventCount/100);
+                // we are going to assume that there will no more than a 1/3 of the delets as collisions
+                count.ShouldBeLessThan(EventCount - (EventCount/100/3));
+            }
+        }
+
+        const string InsertStoreName = "10k_insert.store";
+
+        [TestFixtureSetUp]
+        public void CleanUpExistingFiles()
+        {
+            if (File.Exists(InsertStoreName))
+                File.Delete(InsertStoreName);
+        }
+
+        const int EventCount = 10000;
+    }
 }
