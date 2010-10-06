@@ -1,4 +1,16 @@
-namespace Cashbox
+// Copyright 2010 Travis Smith
+//  
+// Licensed under the Apache License, Version 2.0 (the "License"); you may not use 
+// this file except in compliance with the License. You may obtain a copy of the 
+// License at 
+// 
+//     http://www.apache.org/licenses/LICENSE-2.0 
+// 
+// Unless required by applicable law or agreed to in writing, software distributed 
+// under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR 
+// CONDITIONS OF ANY KIND, either express or implied. See the License for the 
+// specific language governing permissions and limitations under the License.
+namespace Cashbox.Implementations
 {
     using System;
     using System.Collections.Generic;
@@ -7,6 +19,7 @@ namespace Cashbox
     using System.Threading;
     using Magnum.Channels;
     using Magnum.Extensions;
+    using Magnum.Fibers;
     using Magnum.Serialization;
     using Messages;
 
@@ -14,56 +27,78 @@ namespace Cashbox
     public class DocumentSessionBase :
         IDisposable
     {
+        protected static readonly FastTextSerializer Serializer = new FastTextSerializer();
+        readonly Fiber _fiber = new SynchronousFiber();
+        readonly string _filename;
         readonly ChannelAdapter _input = new ChannelAdapter();
         readonly Action<Action> _needLockin;
-        Dictionary<string, string> _store = new Dictionary<string, string>();
-        protected static readonly FastTextSerializer Serializer = new FastTextSerializer();
-        readonly string _filename;
         readonly ChannelConnection _subscription;
+
         ManualResetEvent _saveCompleted;
+        Dictionary<string, string> _store = new Dictionary<string, string>();
 
         public DocumentSessionBase(string filename)
         {
             _filename = filename;
 
             _needLockin = act =>
-            {
-                lock (_store)
                 {
-                    act();
-                }
-            };
+                    lock (_store)
+                    {
+                        act();
+                    }
+                };
 
             _subscription = _input.Connect(config =>
+                {
+                    config.AddConsumerOf<IoProducer>()
+                        .BufferFor(250.Milliseconds()) // quarter of a sec
+                        .UsingConsumer(msgs => Save())
+                        .HandleOnFiber(_fiber);
+
+                    config.AddConsumerOf<RemoveKey>()
+                        .UsingConsumer(RemoveKeyFromSession)
+                        .HandleOnFiber(_fiber);
+
+                    config.AddConsumerOf<LoadFromDisk>()
+                        .UsingConsumer(msg => Load())
+                        .HandleOnFiber(_fiber);
+
+                    config.AddConsumerOf<Request<LoadFromDisk>>()
+                        .UsingConsumer(LoadWithAcknolwedgement)
+                        .HandleOnFiber(_fiber);
+
+                    config.AddConsumerOf<Request<GetWithKey>>()
+                        .UsingConsumer(RetrieveValue)
+                        .HandleOnFiber(_fiber);
+
+                    config.AddConsumerOf<Request<GetWithKeyAndDefault>>()
+                        .UsingConsumer(RetrieveValueWithDefault)
+                        .HandleOnFiber(_fiber);
+
+                    config.AddConsumerOf<Request<GetListWithType>>()
+                        .UsingConsumer(RetrieveListFromType)
+                        .HandleOnFiber(_fiber);
+
+                    config.AddConsumerOf<StoreWithKeyAndValue>()
+                        .UsingConsumer(StoreValue)
+                        .HandleOnFiber(_fiber);
+
+                    config.AddConsumerOf<SaveToDisk>()
+                        .UsingConsumer(msg => Save())
+                        .HandleOnFiber(_fiber);
+                });
+        }
+
+        public void Dispose()
+        {
+            using (_saveCompleted = new ManualResetEvent(false))
             {
-                config.AddConsumerOf<IoProducer>()
-                    .BufferFor(250.Milliseconds()) // quarter of a sec
-                    .UsingConsumer(msgs => Save());
-
-                config.AddConsumerOf<RemoveKey>()
-                    .UsingConsumer(RemoveKeyFromSession);
-
-                config.AddConsumerOf<LoadFromDisk>()
-                    .UsingConsumer(msg => Load());
-
-                config.AddConsumerOf<Request<LoadFromDisk>>()
-                    .UsingConsumer(LoadWithAcknolwedgement);
-
-                config.AddConsumerOf<Request<GetWithKey>>()
-                    .UsingConsumer(RetrieveValue);
-
-                config.AddConsumerOf<Request<GetWithKeyAndDefault>>()
-                    .UsingConsumer(RetrieveValueWithDefault);
-
-                config.AddConsumerOf<Request<GetListWithType>>()
-                    .UsingConsumer(RetrieveListFromType);
-
-                config.AddConsumerOf<StoreWithKeyAndValue>()
-                    .UsingConsumer(StoreValue);
-
-                config.AddConsumerOf<SaveToDisk>()
-                    .UsingConsumer(msg => Save());
-            });
+                RegisterIoEvent(string.Empty);
+                _saveCompleted.WaitOne(15.Seconds());
+                _subscription.Disconnect();
+            }
+            _saveCompleted = null;
         }
 
         void LoadWithAcknolwedgement(Request<LoadFromDisk> message)
@@ -84,7 +119,10 @@ namespace Cashbox
                         .ToList();
                 });
 
-            message.ResponseChannel.Send(new ReturnValue<List<string>> { Value = values });
+            message.ResponseChannel.Send(new ReturnValue<List<string>>
+                {
+                    Value = values
+                });
         }
 
         protected void Send<T>(T message)
@@ -181,17 +219,6 @@ namespace Cashbox
             File.WriteAllText(_filename, text);
             if (_saveCompleted != null)
                 _saveCompleted.Set();
-        }
-
-        public void Dispose()
-        {
-            using(_saveCompleted = new ManualResetEvent(false))
-            {
-                RegisterIoEvent(string.Empty);
-                _saveCompleted.WaitOne(15.Seconds());
-                _subscription.Disconnect();
-            }
-            _saveCompleted = null;
         }
     }
 }

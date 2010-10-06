@@ -75,8 +75,8 @@ namespace Cashbox.Specs
                 int count = session.List<NumericDocument>().Count();
                 Console.WriteLine("{1} (of {2} attempted) deletes: {0}ms", sw.ElapsedMilliseconds, EventCount - count,
                                   EventCount/100);
-                // we are going to assume that there will no more than a 1/3 of the delets as collisions
-                count.ShouldBeLessThan(EventCount - (EventCount/100/3));
+                // at least one delete should have happened
+                count.ShouldBeLessThan(EventCount - 1);
             }
         }
 

@@ -56,6 +56,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ContextSetup.cs" />
     <Compile Include="DocumentSessionSpecs.cs" />
     <Compile Include="NumericDocument.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -67,6 +68,9 @@
       <Project>{3E2F077E-A3C3-4F70-96EA-8ED3B8C93C06}</Project>
       <Name>CabinDB</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="log4net.config.xml" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
