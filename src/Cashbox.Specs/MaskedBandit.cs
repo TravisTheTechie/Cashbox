@@ -21,14 +21,14 @@ namespace Cashbox.Specs
 	[TestFixture]
 	public class MaskedBandit
 	{
-		string _insertStoreName = "10k_insert.store";
+	    const string InsertStoreName = "10k_insert.store";
 
 		[TestFixtureSetUp]
 		public void CleanUpExistingFiles()
 		{
-			if (File.Exists(_insertStoreName))
+			if (File.Exists(InsertStoreName))
 			{
-				File.Delete(_insertStoreName);
+				File.Delete(InsertStoreName);
 			}
 		}
 
@@ -37,9 +37,9 @@ namespace Cashbox.Specs
 		[Test]
 		public void Insert_10k_records()
 		{
-			using (IDocumentSession session = DocumentSessionFactory.Create(_insertStoreName))
+			using (IDocumentSession session = DocumentSessionFactory.Create(InsertStoreName))
 			{
-				Stopwatch sw = new Stopwatch();
+				var sw = new Stopwatch();
 				sw.Start();
 				for (int i = 0; i < EventCount; i++)
 				{
@@ -53,7 +53,7 @@ namespace Cashbox.Specs
 				Console.WriteLine("10k inserts: {0}ms", sw.ElapsedMilliseconds);
 			}
 
-			using(var session = DocumentSessionFactory.Create(_insertStoreName))
+			using(var session = DocumentSessionFactory.Create(InsertStoreName))
 			{
 				for (int i = 0; i < EventCount; i++)
 				{

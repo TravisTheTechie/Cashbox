@@ -1,6 +1,9 @@
 namespace Cashbox
 {
-	public class DocumentSessionFactory
+    using Implementations;
+
+
+    public class DocumentSessionFactory
 	{
 		public static IDocumentSession Create(string filename)
 		{

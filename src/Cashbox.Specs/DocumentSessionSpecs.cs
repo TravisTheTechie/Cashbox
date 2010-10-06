@@ -13,6 +13,7 @@
 namespace Cashbox.Specs
 {
 	using System.Linq;
+	using Implementations;
 	using Magnum.TestFramework;
 
 	
