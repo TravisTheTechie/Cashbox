@@ -14,21 +14,34 @@ namespace Cashbox.Specs
 {
 	using System;
 	using System.Diagnostics;
+	using System.IO;
 	using NUnit.Framework;
 
 
 	[TestFixture]
 	public class MaskedBandit
 	{
+		string _insertStoreName = "10k_insert.store";
+
+		[TestFixtureSetUp]
+		public void CleanUpExistingFiles()
+		{
+			if (File.Exists(_insertStoreName))
+			{
+				File.Delete(_insertStoreName);
+			}
+		}
+
+		const int EventCount = 10000;
+
 		[Test]
 		public void Insert_10k_records()
 		{
-			var insertStoreName = "10k_insert.store";
-			using (IDocumentSession session = DocumentSessionFactory.Create(insertStoreName))
+			using (IDocumentSession session = DocumentSessionFactory.Create(_insertStoreName))
 			{
 				Stopwatch sw = new Stopwatch();
 				sw.Start();
-				for (int i = 0; i < 10000; i++)
+				for (int i = 0; i < EventCount; i++)
 				{
 					session.Store(i.ToString(), new NumericDocument
 						{
@@ -40,9 +53,9 @@ namespace Cashbox.Specs
 				Console.WriteLine("10k inserts: {0}ms", sw.ElapsedMilliseconds);
 			}
 
-			using(var session = DocumentSessionFactory.Create(insertStoreName))
+			using(var session = DocumentSessionFactory.Create(_insertStoreName))
 			{
-				for (int i = 0; i < 10000; i++)
+				for (int i = 0; i < EventCount; i++)
 				{
 					var result = session.Retrieve<NumericDocument>(i.ToString()).Number;
 

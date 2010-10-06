@@ -15,20 +15,124 @@ namespace Cashbox
 	using System;
 	using System.Collections.Generic;
 	using System.IO;
+	using System.Linq;
+	using Magnum.Channels;
+	using Magnum.Extensions;
 	using Magnum.Serialization;
 
 
 	public class DocumentSession :
 		IDocumentSession
 	{
-		Dictionary<Type, TypeCabin> _store = new Dictionary<Type, TypeCabin>();
-		readonly static FastTextSerializer _serializer = new FastTextSerializer();
+		static readonly FastTextSerializer _serializer = new FastTextSerializer();
 		readonly string _filename;
+		readonly ChannelAdapter _input;
+		readonly ChannelConnection _subscription;
+		Dictionary<string, string> _store = new Dictionary<string, string>();
 
 		public DocumentSession(string filename)
 		{
 			_filename = filename;
 			Load();
+
+			_input = new ChannelAdapter();
+
+			_subscription = _input.Connect(config =>
+				{
+					config.AddConsumerOf<IoProducer>()
+						.BufferFor(250.Milliseconds()) // quarter of a sec
+						.UsingConsumer(msgs => Save());
+				});
+		}
+
+		public T Retrieve<T>(string key) where T : class
+		{
+			string realKey = KeyConverter<T>(key);
+			string text;
+
+			lock (_store)
+			{
+				if (!_store.ContainsKey(realKey))
+					return default(T);
+
+				text = _store[realKey];
+			}
+
+			return _serializer.Deserialize<T>(text);
+		}
+
+		public T RetrieveWithDefault<T>(string key, Func<T> defaultCreation) where T : class
+		{
+			string realKey = KeyConverter<T>(key);
+			string text;
+
+			lock (_store)
+			{
+				if (!_store.ContainsKey(realKey))
+				{
+					_store.Add(realKey, _serializer.Serialize(defaultCreation()));
+					RegisterIoEvent();
+				}
+
+				text = _store[realKey];
+			}
+
+			return _serializer.Deserialize<T>(text);
+		}
+
+		public void Store<T>(string key, T document) where T : class
+		{
+			string realKey = KeyConverter<T>(key);
+			string text = _serializer.Serialize(document);
+
+			lock (_store)
+			{
+				if (!_store.ContainsKey(realKey))
+					_store.Add(realKey, text);
+				else
+					_store[realKey] = text;
+			}
+		
+			RegisterIoEvent();
+		}
+
+		public IEnumerable<T> List<T>() where T : class
+		{
+			string keyStart = KeyConverter<T>(string.Empty);
+
+			lock (_store)
+			{
+				return _store
+					.Where(kvp => kvp.Key.StartsWith(keyStart))
+					.Select(kvp => _serializer.Deserialize<T>(kvp.Value))
+					.ToList();
+			}
+		}
+
+		public void Delete<T>(string key) where T : class
+		{
+			string realKey = KeyConverter<T>(key);
+
+			lock (_store)
+			{
+				if (!_store.ContainsKey(realKey))
+					return;
+
+				_store.Remove(realKey);
+			}
+
+			RegisterIoEvent();
+		}
+
+		public void Dispose()
+		{
+			_subscription.Disconnect();
+			Save();
+		}
+
+		void RegisterIoEvent()
+		{
+			_input.Send(new IoProducer());
 		}
 
 		void Load()
@@ -36,108 +140,28 @@ namespace Cashbox
 			if (File.Exists(_filename))
 			{
 				string value = File.ReadAllText(_filename);
-				_store = _serializer.Deserialize<Dictionary<Type, TypeCabin>>(value);
+				_store = _serializer.Deserialize<Dictionary<string, string>>(value);
 			}
 		}
 
 		void Save()
 		{
-			File.WriteAllText(_filename, _serializer.Serialize(_store));
-		}
-
-		public T Retrieve<T>(string key) where T : class
-		{
-			TypeCabin typeCabin;
-
+			string text;
 			lock (_store)
 			{
-				if (!_store.ContainsKey(typeof(T)))
-					return default(T);
-
-				typeCabin = _store[typeof(T)];
-
-				if (!typeCabin.Contains(key))
-					return default(T);
-
-				return typeCabin.Retrieve<T>(key);
+				text = _serializer.Serialize(_store);
 			}
+			File.WriteAllText(_filename, text);
 		}
 
-		public T RetrieveWithDefault<T>(string key, Func<T> defaultCreation) where T : class
+		static string KeyConverter<T>(string key)
 		{
-			TypeCabin typeCabin;
-
-			lock (_store)
-			{
-				if (!_store.ContainsKey(typeof(T)))
-					_store.Add(typeof(T), new TypeCabin());
-
-				typeCabin = _store[typeof(T)];
-
-				if (!typeCabin.Contains(key))
-				{
-					typeCabin.Add(key, defaultCreation());
-					Save();
-				}
-
-				return typeCabin.Retrieve<T>(key);
-			}
+			return "{0}___{1}".FormatWith(typeof(T).FullName, key);
 		}
+	}
 
-		public void Store<T>(string key, T document) where T : class
-		{
-			TypeCabin typeCabin;
 
-			lock (_store)
-			{
-				if (!_store.ContainsKey(typeof(T)))
-					_store.Add(typeof(T), new TypeCabin());
-
-				typeCabin = _store[typeof(T)];
-
-				if (!typeCabin.Contains(key))
-					typeCabin.Add(key, document);
-				else
-					typeCabin.Store(key, document);
-
-				Save();
-			}
-		}
-
-		public IEnumerable<T> List<T>() where T : class
-		{
-			lock (_store)
-			{
-				if (_store.ContainsKey(typeof(T)))
-					return _store[typeof(T)].GetValues<T>();
-
-				return new List<T>();
-			}
-		}
-
-		public void Delete<T>(string key) where T : class
-		{
-			TypeCabin typeCabin;
-
-			lock (_store)
-			{
-				if (!_store.ContainsKey(typeof(T)))
-					return;
-
-				typeCabin = _store[typeof(T)];
-
-				if (!typeCabin.Contains(key))
-					return;
-
-				typeCabin.Delete(key);
-
-				Save();
-			}
-		}
-
-		public void Dispose()
-		{
-			Save();
-		}
+	class IoProducer
+	{
 	}
 }
