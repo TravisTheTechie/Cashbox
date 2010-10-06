@@ -12,156 +12,183 @@
 // specific language governing permissions and limitations under the License.
 namespace Cashbox
 {
-	using System;
-	using System.Collections.Generic;
-	using System.IO;
-	using System.Linq;
-	using Magnum.Channels;
-	using Magnum.Extensions;
-	using Magnum.Serialization;
+    using System;
+    using System.Collections.Generic;
+    using System.IO;
+    using System.Linq;
+    using Magnum.Channels;
+    using Magnum.Extensions;
+    using Magnum.Serialization;
 
 
-	public class DocumentSession :
-		IDocumentSession
-	{
-		static readonly FastTextSerializer _serializer = new FastTextSerializer();
-		readonly string _filename;
-		readonly ChannelAdapter _input;
-		readonly ChannelConnection _subscription;
-		Dictionary<string, string> _store = new Dictionary<string, string>();
+    public class DocumentSession :
+        IDocumentSession
+    {
+        static readonly FastTextSerializer _serializer = new FastTextSerializer();
+        readonly string _filename;
+        readonly ChannelAdapter _input;
+        readonly Action<Action> _needLockin;
+        readonly ChannelConnection _subscription;
+        Dictionary<string, string> _store = new Dictionary<string, string>();
 
-		public DocumentSession(string filename)
-		{
-			_filename = filename;
-			Load();
+        public DocumentSession(string filename)
+        {
+            _filename = filename;
+            Load();
 
-			_input = new ChannelAdapter();
+            _needLockin = act =>
+                {
+                    lock (_store)
+                    {
+                        act();
+                    }
+                };
 
-			_subscription = _input.Connect(config =>
-				{
-					config.AddConsumerOf<IoProducer>()
-						.BufferFor(250.Milliseconds()) // quarter of a sec
-						.UsingConsumer(msgs => Save());
-				});
-		}
+            _input = new ChannelAdapter();
 
-		public T Retrieve<T>(string key) where T : class
-		{
-			string realKey = KeyConverter<T>(key);
-			string text;
+            _subscription = _input.Connect(config =>
+                {
+                    config.AddConsumerOf<IoProducer>()
+                        .BufferFor(250.Milliseconds()) // quarter of a sec
+                        .UsingConsumer(msgs => Save());
 
-			lock (_store)
-			{
-				if (!_store.ContainsKey(realKey))
-					return default(T);
+                    config.AddConsumerOf<RemoveKey>()
+                        .UsingConsumer(RemoveKeyFromSession);
+                });
+        }
 
-				text = _store[realKey];
-			}
+        public T Retrieve<T>(string key) where T : class
+        {
+            string realKey = KeyConverter<T>(key);
+            string text = null;
 
-			return _serializer.Deserialize<T>(text);
-		}
+            _needLockin(() =>
+                {
+                    if (_store.ContainsKey(realKey))
+                        text = _store[realKey];
+                });
 
-		public T RetrieveWithDefault<T>(string key, Func<T> defaultCreation) where T : class
-		{
-			string realKey = KeyConverter<T>(key);
-			string text;
+            if (text == null)
+                return default(T);
 
-			lock (_store)
-			{
-				if (!_store.ContainsKey(realKey))
-				{
-					_store.Add(realKey, _serializer.Serialize(defaultCreation()));
-					RegisterIoEvent();
-				}
+            return _serializer.Deserialize<T>(text);
+        }
 
-				text = _store[realKey];
-			}
+        public T RetrieveWithDefault<T>(string key, Func<T> defaultCreation) where T : class
+        {
+            string realKey = KeyConverter<T>(key);
+            string text = null;
 
-			return _serializer.Deserialize<T>(text);
-		}
+            _needLockin(() =>
+                {
+                    if (!_store.ContainsKey(realKey))
+                    {
+                        _store.Add(realKey, _serializer.Serialize(defaultCreation()));
+                        RegisterIoEvent(realKey);
+                    }
 
-		public void Store<T>(string key, T document) where T : class
-		{
-			string realKey = KeyConverter<T>(key);
-			string text = _serializer.Serialize(document);
+                    text = _store[realKey];
+                });
 
-			lock (_store)
-			{
-				if (!_store.ContainsKey(realKey))
-					_store.Add(realKey, text);
-				else
-					_store[realKey] = text;
-			}
-		
-			RegisterIoEvent();
-		}
+            return _serializer.Deserialize<T>(text);
+        }
 
-		public IEnumerable<T> List<T>() where T : class
-		{
-			string keyStart = KeyConverter<T>(string.Empty);
+        public void Store<T>(string key, T document) where T : class
+        {
+            string realKey = KeyConverter<T>(key);
+            string text = _serializer.Serialize(document);
 
-			lock (_store)
-			{
-				return _store
-					.Where(kvp => kvp.Key.StartsWith(keyStart))
-					.Select(kvp => _serializer.Deserialize<T>(kvp.Value))
-					.ToList();
-			}
-		}
+            _needLockin(() =>
+                {
+                    if (!_store.ContainsKey(realKey))
+                        _store.Add(realKey, text);
+                    else
+                        _store[realKey] = text;
+                });
 
-		public void Delete<T>(string key) where T : class
-		{
-			string realKey = KeyConverter<T>(key);
+            RegisterIoEvent(realKey);
+        }
 
-			lock (_store)
-			{
-				if (!_store.ContainsKey(realKey))
-					return;
+        public IEnumerable<T> List<T>() where T : class
+        {
+            string keyStart = KeyConverter<T>(string.Empty);
+            List<string> values = null;
 
-				_store.Remove(realKey);
-			}
+            _needLockin(() =>
+                {
+                    values = _store
+                        .Where(kvp => kvp.Key.StartsWith(keyStart))
+                        .Select(kvp => kvp.Value)
+                        .ToList();
+                });
 
-			RegisterIoEvent();
-		}
+            return values.ConvertAll(str => _serializer.Deserialize<T>(str));
+        }
 
-		public void Dispose()
-		{
-			_subscription.Disconnect();
-			Save();
-		}
+        public void Delete<T>(string key) where T : class
+        {
+            string realKey = KeyConverter<T>(key);
 
-		void RegisterIoEvent()
-		{
-			_input.Send(new IoProducer());
-		}
+            _input.Send(new RemoveKey
+                {
+                    Key = realKey
+                });
+        }
 
-		void Load()
-		{
-			if (File.Exists(_filename))
-			{
-				string value = File.ReadAllText(_filename);
-				_store = _serializer.Deserialize<Dictionary<string, string>>(value);
-			}
-		}
+        public void Dispose()
+        {
+            _subscription.Disconnect();
+            Save();
+        }
 
-		void Save()
-		{
-			string text;
-			lock (_store)
-			{
-				text = _serializer.Serialize(_store);
-			}
-			File.WriteAllText(_filename, text);
-		}
+        void RemoveKeyFromSession(RemoveKey message)
+        {
+            _needLockin(() => { _store.Remove(message.Key); });
+            RegisterIoEvent(message.Key);
+        }
 
-		static string KeyConverter<T>(string key)
-		{
-			return "{0}___{1}".FormatWith(typeof(T).FullName, key);
-		}
-	}
+        void RegisterIoEvent(string key)
+        {
+            _input.Send(new IoProducer { Key = key });
+        }
+
+        void Load()
+        {
+            if (File.Exists(_filename))
+            {
+                string value = File.ReadAllText(_filename);
+                _store = _serializer.Deserialize<Dictionary<string, string>>(value);
+            }
+        }
+
+        void Save()
+        {
+            string text = string.Empty;
+            _needLockin(() => text = _serializer.Serialize(_store));
+            File.WriteAllText(_filename, text);
+        }
+
+        static string KeyConverter<T>(string key)
+        {
+            return "{0}___{1}".FormatWith(typeof(T).FullName, key);
+        }
+    }
 
 
-	class IoProducer
-	{
-	}
+    class IoProducer :
+        KeyBasedMessage
+    {
+    }
+
+
+    class RemoveKey :
+        KeyBasedMessage
+    {
+    }
+
+
+    class KeyBasedMessage
+    {
+        public string Key { get; set; }
+    }
 }
