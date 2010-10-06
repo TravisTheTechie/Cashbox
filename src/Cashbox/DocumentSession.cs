@@ -16,6 +16,7 @@ namespace Cashbox
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
+    using System.Threading;
     using Magnum.Channels;
     using Magnum.Extensions;
     using Magnum.Serialization;
@@ -29,12 +30,12 @@ namespace Cashbox
         readonly ChannelAdapter _input;
         readonly Action<Action> _needLockin;
         readonly ChannelConnection _subscription;
+        readonly ManualResetEvent _loadHappened = new ManualResetEvent(false);
         Dictionary<string, string> _store = new Dictionary<string, string>();
 
         public DocumentSession(string filename)
         {
             _filename = filename;
-            Load();
 
             _needLockin = act =>
                 {
@@ -54,7 +55,16 @@ namespace Cashbox
 
                     config.AddConsumerOf<RemoveKey>()
                         .UsingConsumer(RemoveKeyFromSession);
+
+                    config.AddConsumerOf<LoadFromDisk>()
+                        .UsingConsumer(msg => Load());
                 });
+
+            _input.Send(new LoadFromDisk());
+
+            // block the thread so we don't try to get data that hasn't loaded yet
+            // once everything is happening on the channel, this might go away
+            _loadHappened.WaitOne(5.Seconds());
         }
 
         public T Retrieve<T>(string key) where T : class
@@ -149,7 +159,10 @@ namespace Cashbox
 
         void RegisterIoEvent(string key)
         {
-            _input.Send(new IoProducer { Key = key });
+            _input.Send(new IoProducer
+                {
+                    Key = key
+                });
         }
 
         void Load()
@@ -157,8 +170,14 @@ namespace Cashbox
             if (File.Exists(_filename))
             {
                 string value = File.ReadAllText(_filename);
-                _store = _serializer.Deserialize<Dictionary<string, string>>(value);
+                _needLockin(() =>
+                    {
+                        _store = _serializer.Deserialize<Dictionary<string, string>>(value);
+
+                    });
             }
+
+            _loadHappened.Set();
         }
 
         void Save()
@@ -190,5 +209,17 @@ namespace Cashbox
     class KeyBasedMessage
     {
         public string Key { get; set; }
+    }
+
+
+    class LoadFromDisk :
+        KeyBasedMessage
+    {
+    }
+
+
+    class SaveToDisk :
+        KeyBasedMessage
+    {
     }
 }
