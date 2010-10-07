@@ -31,6 +31,14 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Community.CsharpSqlite, Version=3.6.23.0, Culture=neutral, processorArchitecture=x86">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\lib\SQLite\Community.CsharpSqlite.dll</HintPath>
+    </Reference>
+    <Reference Include="Community.CsharpSqlite.SQLiteClient, Version=3.6.23.0, Culture=neutral, processorArchitecture=x86">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\lib\SQLite\Community.CsharpSqlite.SQLiteClient.dll</HintPath>
+    </Reference>
     <Reference Include="Magnum">
       <HintPath>..\..\lib\Magnum\Magnum.dll</HintPath>
     </Reference>
@@ -46,6 +54,8 @@
     <Compile Include="Implementations\CashboxDocumentSession.cs" />
     <Compile Include="Implementations\InMemoryEngine.cs" />
     <Compile Include="DocumentSessionFactory.cs" />
+    <Compile Include="Implementations\SqliteEngine.cs" />
+    <Compile Include="Implementations\SqliteEngineException.cs" />
     <Compile Include="Messages\CashboxMessage.cs" />
     <Compile Include="Messages\RetrieveValue.cs" />
     <Compile Include="Messages\InMemoryEngineDataChange.cs" />
@@ -53,6 +63,7 @@
     <Compile Include="Messages\KeyValueCashboxMessage.cs" />
     <Compile Include="Messages\ListValuesForType.cs" />
     <Compile Include="DocumentSession.cs" />
+    <Compile Include="Messages\ReturnException.cs" />
     <Compile Include="Messages\Shutdown.cs" />
     <Compile Include="Messages\Startup.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

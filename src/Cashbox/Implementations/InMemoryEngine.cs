@@ -123,7 +123,7 @@ namespace Cashbox.Implementations
                         .UsingConsumer(msg => response.Complete(msg.Value));
                 }))
             {
-                Request(message, channel);
+                _input.Request(message, channel);
 
                 response.WaitUntilCompleted(1.Minutes());
                 return response.Value;
@@ -139,11 +139,6 @@ namespace Cashbox.Implementations
 		{
 			_filename = filename;
 		}
-
-        protected void Request<T>(T message, UntypedChannel channel)
-        {
-            _input.Request(message, channel);
-        }
 
         void RetrieveValue(Request<RetrieveValue> message)
         {
