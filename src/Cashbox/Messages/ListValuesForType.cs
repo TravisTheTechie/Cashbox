@@ -10,19 +10,10 @@
 // under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR 
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the 
 // specific language governing permissions and limitations under the License.
-namespace Cashbox
+namespace Cashbox.Messages
 {
-	using System;
-	using System.Collections.Generic;
-
-
-	public interface IDocumentSession :
-		IDisposable
-	{
-		T Retrieve<T>(string key) where T : class;
-		T RetrieveWithDefault<T>(string key, Func<T> defaultCreation) where T : class;
-		void Store<T>(string key, T document) where T : class;
-		IEnumerable<T> List<T>() where T : class;
-		void Delete<T>(string key) where T : class;
-	}
+    public class ListValuesForType :
+        KeyedCashboxMessage
+    {
+    }
 }

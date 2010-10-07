@@ -12,8 +12,9 @@
 // specific language governing permissions and limitations under the License.
 namespace Cashbox.Messages
 {
-    class IoProducer :
-        KeyBasedMessage
+    public class KeyValueCashboxMessage<T> :
+        KeyedCashboxMessage
     {
+        public T Value { get; set; }
     }
 }

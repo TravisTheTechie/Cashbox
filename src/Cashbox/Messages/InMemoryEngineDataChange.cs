@@ -12,8 +12,8 @@
 // specific language governing permissions and limitations under the License.
 namespace Cashbox.Messages
 {
-    class SaveToDisk :
-        KeyBasedMessage
+	class InMemoryEngineDataChange :
+        KeyedCashboxMessage
     {
     }
 }

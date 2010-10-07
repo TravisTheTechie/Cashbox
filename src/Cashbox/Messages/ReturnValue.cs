@@ -12,8 +12,8 @@
 // specific language governing permissions and limitations under the License.
 namespace Cashbox.Messages
 {
-    class ReturnValue<T> :
-        KeyValuePairBasedMessage<T>
+    public class ReturnValue<T> :
+        KeyValueCashboxMessage<T>
     {
     }
 }

@@ -17,6 +17,7 @@ namespace Cashbox.Implementations
     using System.IO;
     using System.Linq;
     using System.Threading;
+    using Magnum;
     using Magnum.Channels;
     using Magnum.Extensions;
     using Magnum.Fibers;
@@ -24,22 +25,22 @@ namespace Cashbox.Implementations
     using Messages;
 
 
-    public class DocumentSessionBase :
-        IDisposable
+    public class InMemoryEngine :
+		Engine
     {
         protected static readonly FastTextSerializer Serializer = new FastTextSerializer();
         readonly Fiber _fiber = new SynchronousFiber();
-        readonly string _filename;
         readonly ChannelAdapter _input = new ChannelAdapter();
         readonly Action<Action> _needLockin;
         readonly ChannelConnection _subscription;
+    	string _filename;
 
         ManualResetEvent _saveCompleted;
         Dictionary<string, string> _store = new Dictionary<string, string>();
 
-        public DocumentSessionBase(string filename)
+        public InMemoryEngine(string filename)
         {
-            _filename = filename;
+        	_filename = filename;
 
             _needLockin = act =>
                 {
@@ -51,41 +52,33 @@ namespace Cashbox.Implementations
 
             _subscription = _input.Connect(config =>
                 {
-                    config.AddConsumerOf<IoProducer>()
+                	config.AddConsumerOf<Request<Startup>>()
+                		.UsingConsumer(msg => { Load(); msg.ResponseChannel.Send(new ReturnValue<string>()); })
+                		.HandleOnFiber(_fiber);
+
+					config.AddConsumerOf<Request<Shutdown>>()
+						.UsingConsumer(msg => { Save(); msg.ResponseChannel.Send(new ReturnValue<string>()); })
+						.HandleOnFiber(_fiber);
+
+                    config.AddConsumerOf<InMemoryEngineDataChange>()
                         .BufferFor(250.Milliseconds()) // quarter of a sec
                         .UsingConsumer(msgs => Save())
                         .HandleOnFiber(_fiber);
 
-                    config.AddConsumerOf<RemoveKey>()
+                    config.AddConsumerOf<RemoveValue>()
                         .UsingConsumer(RemoveKeyFromSession)
                         .HandleOnFiber(_fiber);
 
-                    config.AddConsumerOf<LoadFromDisk>()
-                        .UsingConsumer(msg => Load())
-                        .HandleOnFiber(_fiber);
-
-                    config.AddConsumerOf<Request<LoadFromDisk>>()
-                        .UsingConsumer(LoadWithAcknolwedgement)
-                        .HandleOnFiber(_fiber);
-
-                    config.AddConsumerOf<Request<GetWithKey>>()
+                    config.AddConsumerOf<Request<RetrieveValue>>()
                         .UsingConsumer(RetrieveValue)
                         .HandleOnFiber(_fiber);
 
-                    config.AddConsumerOf<Request<GetWithKeyAndDefault>>()
-                        .UsingConsumer(RetrieveValueWithDefault)
-                        .HandleOnFiber(_fiber);
-
-                    config.AddConsumerOf<Request<GetListWithType>>()
+                    config.AddConsumerOf<Request<ListValuesForType>>()
                         .UsingConsumer(RetrieveListFromType)
                         .HandleOnFiber(_fiber);
 
-                    config.AddConsumerOf<StoreWithKeyAndValue>()
+                    config.AddConsumerOf<StoreValue>()
                         .UsingConsumer(StoreValue)
-                        .HandleOnFiber(_fiber);
-
-                    config.AddConsumerOf<SaveToDisk>()
-                        .UsingConsumer(msg => Save())
                         .HandleOnFiber(_fiber);
                 });
         }
@@ -94,20 +87,14 @@ namespace Cashbox.Implementations
         {
             using (_saveCompleted = new ManualResetEvent(false))
             {
-                RegisterIoEvent(string.Empty);
+                RegisterMemoryChange(string.Empty);
                 _saveCompleted.WaitOne(15.Seconds());
                 _subscription.Disconnect();
             }
             _saveCompleted = null;
         }
 
-        void LoadWithAcknolwedgement(Request<LoadFromDisk> message)
-        {
-            Load();
-            message.ResponseChannel.Send(new ReturnValue<string>());
-        }
-
-        void RetrieveListFromType(Request<GetListWithType> message)
+    	void RetrieveListFromType(Request<ListValuesForType> message)
         {
             List<string> values = null;
 
@@ -125,41 +112,40 @@ namespace Cashbox.Implementations
                 });
         }
 
-        protected void Send<T>(T message)
+    	public TResponse MakeRequest<TRequest, TResponse>(TRequest message) where TRequest : CashboxMessage
+    	{
+            var response = new Future<TResponse>();
+            var channel = new ChannelAdapter();
+
+            using (channel.Connect(config =>
+                {
+                    config.AddConsumerOf<ReturnValue<TResponse>>()
+                        .UsingConsumer(msg => response.Complete(msg.Value));
+                }))
+            {
+                Request(message, channel);
+
+                response.WaitUntilCompleted(1.Minutes());
+                return response.Value;
+            }
+    	}
+
+    	public void Send<T>(T message) where T : CashboxMessage
         {
             _input.Send(message);
         }
+
+		public void SetFilename(string filename)
+		{
+			_filename = filename;
+		}
 
         protected void Request<T>(T message, UntypedChannel channel)
         {
             _input.Request(message, channel);
         }
 
-        void RetrieveValueWithDefault(Request<GetWithKeyAndDefault> message)
-        {
-            string text = null;
-
-            _needLockin(() =>
-                {
-                    if (!_store.ContainsKey(message.Body.Key))
-                    {
-                        _store.Add(message.Body.Key, message.Body.DefaultValue);
-                        _input.Send(new IoProducer
-                            {
-                                Key = message.Body.Key
-                            });
-                    }
-                    text = _store[message.Body.Key];
-                });
-
-            message.ResponseChannel.Send(new ReturnValue<string>
-                {
-                    Key = message.Body.Key,
-                    Value = text
-                });
-        }
-
-        void RetrieveValue(Request<GetWithKey> message)
+        void RetrieveValue(Request<RetrieveValue> message)
         {
             string text = null;
 
@@ -176,21 +162,21 @@ namespace Cashbox.Implementations
                 });
         }
 
-        void RemoveKeyFromSession(RemoveKey message)
+        void RemoveKeyFromSession(RemoveValue message)
         {
-            _needLockin(() => { _store.Remove(message.Key); });
-            RegisterIoEvent(message.Key);
+            _needLockin(() => _store.Remove(message.Key));
+            RegisterMemoryChange(message.Key);
         }
 
-        void RegisterIoEvent(string key)
+        void RegisterMemoryChange(string key)
         {
-            _input.Send(new IoProducer
+            _input.Send(new InMemoryEngineDataChange
                 {
                     Key = key
                 });
         }
 
-        void StoreValue(StoreWithKeyAndValue message)
+        void StoreValue(StoreValue message)
         {
             _needLockin(() =>
                 {
@@ -200,7 +186,7 @@ namespace Cashbox.Implementations
                         _store[message.Key] = message.Value;
                 });
 
-            RegisterIoEvent(message.Key);
+            RegisterMemoryChange(message.Key);
         }
 
         void Load()

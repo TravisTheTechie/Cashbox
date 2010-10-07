@@ -20,12 +20,12 @@ namespace Cashbox.Specs
     [Scenario]
     public class DocumentSessionBase
     {
-        protected DocumentSession Session { get; set; }
+        protected CashboxDocumentSession Session { get; set; }
 
         [Given]
         public void A_cabin_session()
         {
-            Session = new DocumentSession("session.specs.store");
+            Session = new CashboxDocumentSession(new InMemoryEngine("session.specs.store"));
         }
 
         [Finally]

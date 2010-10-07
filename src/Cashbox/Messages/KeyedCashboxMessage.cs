@@ -12,9 +12,9 @@
 // specific language governing permissions and limitations under the License.
 namespace Cashbox.Messages
 {
-    class GetWithKeyAndDefault :
-        GetWithKey
+    public class KeyedCashboxMessage :
+		CashboxMessage
     {
-        public string DefaultValue { get; set; }
+        public string Key { get; set; }
     }
 }

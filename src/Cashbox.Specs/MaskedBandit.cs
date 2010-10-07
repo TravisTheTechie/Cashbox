@@ -26,7 +26,7 @@ namespace Cashbox.Specs
         [Test]
         public void Robbin_the_bank()
         {
-            using (IDocumentSession session = DocumentSessionFactory.Create(InsertStoreName))
+            using (DocumentSession session = DocumentSessionFactory.Create(InsertStoreName))
             {
                 var sw = new Stopwatch();
                 sw.Start();
@@ -42,7 +42,7 @@ namespace Cashbox.Specs
                 Console.WriteLine("10k inserts: {0}ms", sw.ElapsedMilliseconds);
             }
 
-            using (IDocumentSession session = DocumentSessionFactory.Create(InsertStoreName))
+            using (DocumentSession session = DocumentSessionFactory.Create(InsertStoreName))
             {
                 var sw = new Stopwatch();
                 sw.Start();
@@ -60,7 +60,7 @@ namespace Cashbox.Specs
                 Console.WriteLine("10k reads: {0}ms", sw.ElapsedMilliseconds);
             }
 
-            using (IDocumentSession session = DocumentSessionFactory.Create(InsertStoreName))
+            using (DocumentSession session = DocumentSessionFactory.Create(InsertStoreName))
             {
                 var rand = new Random();
 

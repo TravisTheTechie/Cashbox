@@ -12,8 +12,8 @@
 // specific language governing permissions and limitations under the License.
 namespace Cashbox.Messages
 {
-    class GetListWithType :
-        KeyBasedMessage
+    public class RemoveValue :
+        KeyedCashboxMessage
     {
     }
 }
