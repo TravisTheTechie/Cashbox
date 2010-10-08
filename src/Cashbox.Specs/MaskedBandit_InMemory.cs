@@ -1,4 +1,4 @@
-﻿// Copyright 2010 Travis Smith
+// Copyright 2010 Travis Smith
 //  
 // Licensed under the Apache License, Version 2.0 (the "License"); you may not use 
 // this file except in compliance with the License. You may obtain a copy of the 
@@ -12,24 +12,30 @@
 // specific language governing permissions and limitations under the License.
 namespace Cashbox.Specs
 {
-    using System.Diagnostics;
     using System.IO;
-    using System.Reflection;
-    using log4net.Config;
+    using Implementations;
     using NUnit.Framework;
 
 
-    [SetUpFixture]
-    public class ContextSetup
+    [TestFixture]
+    public class MaskedBandit_InMemory :
+        MaskedBanditBase
     {
-        [SetUp]
-        public void Before_any()
+        [Test]
+        public void Robbin_the_in_memory_bank()
         {
-            Trace.WriteLine("Loading Log4net");
+            DocumentSessionFactory.SetEngineFactory(str => new InMemoryEngine(str));
 
-            var file = new FileInfo("log4net.config.xml");
+            RobTheBank(InsertStoreName);
+        }
 
-            XmlConfigurator.Configure(file);
+        const string InsertStoreName = "10k_insert.inmemory.store";
+
+        [TestFixtureSetUp]
+        public void CleanUpExistingFiles()
+        {
+            if (File.Exists(InsertStoreName))
+                File.Delete(InsertStoreName);
         }
     }
 }

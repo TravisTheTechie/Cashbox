@@ -17,19 +17,21 @@ namespace Cashbox.Implementations
     using System.IO;
     using System.Linq;
     using System.Threading;
-    using Magnum;
-    using Magnum.Channels;
+    using log4net;
     using Magnum.Extensions;
-    using Magnum.Fibers;
     using Magnum.Serialization;
     using Messages;
+    using Stact;
+    using Stact.Internal;
 
 
     public class InMemoryEngine :
 		Engine
     {
+        static readonly ILog _logger = LogManager.GetLogger("Cashbox.Engine.InMemoryEngine");
+
         protected static readonly FastTextSerializer Serializer = new FastTextSerializer();
-        readonly Fiber _fiber = new SynchronousFiber();
+        readonly Fiber _fiber = new ThreadFiber();
         readonly ChannelAdapter _input = new ChannelAdapter();
         readonly Action<Action> _needLockin;
         readonly ChannelConnection _subscription;
@@ -85,6 +87,7 @@ namespace Cashbox.Implementations
 
         public void Dispose()
         {
+            //_logger.Info("Disposing");
             using (_saveCompleted = new ManualResetEvent(false))
             {
                 RegisterMemoryChange(string.Empty);
@@ -96,6 +99,8 @@ namespace Cashbox.Implementations
 
     	void RetrieveListFromType(Request<ListValuesForType> message)
         {
+            //_logger.DebugFormat("Retrieving list for {0}", message.Body.Key);
+
             List<string> values = null;
 
             _needLockin(() =>
@@ -114,7 +119,7 @@ namespace Cashbox.Implementations
 
     	public TResponse MakeRequest<TRequest, TResponse>(TRequest message) where TRequest : CashboxMessage
     	{
-            var response = new Future<TResponse>();
+            var response = new Magnum.Future<TResponse>();
             var channel = new ChannelAdapter();
 
             using (channel.Connect(config =>
@@ -125,7 +130,7 @@ namespace Cashbox.Implementations
             {
                 _input.Request(message, channel);
 
-                response.WaitUntilCompleted(1.Minutes());
+                response.WaitUntilCompleted(5.Seconds());
                 return response.Value;
             }
     	}

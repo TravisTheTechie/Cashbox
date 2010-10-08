@@ -12,26 +12,28 @@
 // specific language governing permissions and limitations under the License.
 namespace Cashbox.Specs
 {
+    using System.IO;
     using System.Linq;
     using Implementations;
     using Magnum.TestFramework;
 
 
-    [Scenario]
     public class DocumentSessionBase
     {
-        protected CashboxDocumentSession Session { get; set; }
+        protected DocumentSession Session { get; set; }
 
         [Given]
         public void A_cabin_session()
         {
-            Session = new CashboxDocumentSession(new InMemoryEngine("session.specs.store"));
+            DocumentSessionFactory.SetEngineFactory(str => new SqliteEngine(str));
+            Session = DocumentSessionFactory.Create("session.specs.store");
         }
 
         [Finally]
         public void Dispose_of_stuff()
         {
             Session.Dispose();
+            File.Delete("session.specs.store");
         }
     }
 
@@ -63,7 +65,7 @@ namespace Cashbox.Specs
         [After]
         public void Clear_out_list_values()
         {
-            Session.Delete<TestDocument1>(Key);
+            //Session.Delete<TestDocument1>(Key);
         }
     }
 

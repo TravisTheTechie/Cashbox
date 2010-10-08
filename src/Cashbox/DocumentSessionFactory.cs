@@ -12,14 +12,27 @@
 // specific language governing permissions and limitations under the License.
 namespace Cashbox
 {
-	using Implementations;
+    using System;
+    using Implementations;
 
 
-	public class DocumentSessionFactory
+	public static class DocumentSessionFactory
 	{
-		public static DocumentSession Create(string filename)
+	    static Func<string, Engine> _engineFactory;
+
+        static DocumentSessionFactory()
+        {
+            _engineFactory = str => new SqliteEngine(str);
+        }
+
+	    public static void SetEngineFactory(Func<string, Engine> engineFactory)
+	    {
+	        _engineFactory = engineFactory;
+	    }
+
+	    public static DocumentSession Create(string filename)
 		{
-			return new CashboxDocumentSession(new InMemoryEngine(filename));
+			return new CashboxDocumentSession(_engineFactory(filename));
 		}
 	}
 }
