@@ -12,7 +12,8 @@
 // specific language governing permissions and limitations under the License.
 namespace Cashbox.Specs
 {
-    using Implementations;
+    using System.IO;
+    using Engines;
     using NUnit.Framework;
 
 
@@ -33,8 +34,8 @@ namespace Cashbox.Specs
         [TestFixtureSetUp]
         public void CleanUpExistingFiles()
         {
-            //if (File.Exists(InsertStoreName))
-            //    File.Delete(InsertStoreName);
+            if (File.Exists(InsertStoreName))
+                File.Delete(InsertStoreName);
         }
     }
 }

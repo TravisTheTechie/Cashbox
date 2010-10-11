@@ -42,7 +42,8 @@
     <Reference Include="log4net">
       <HintPath>..\..\lib\log4net\log4net.dll</HintPath>
     </Reference>
-    <Reference Include="Magnum">
+    <Reference Include="Magnum, Version=1.1.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\lib\Magnum\Magnum.dll</HintPath>
     </Reference>
     <Reference Include="Stact">
@@ -58,10 +59,10 @@
   <ItemGroup>
     <Compile Include="Engine.cs" />
     <Compile Include="Implementations\CashboxDocumentSession.cs" />
-    <Compile Include="Implementations\InMemoryEngine.cs" />
+    <Compile Include="Engines\InMemoryEngine.cs" />
     <Compile Include="DocumentSessionFactory.cs" />
-    <Compile Include="Implementations\SqliteEngine.cs" />
-    <Compile Include="Implementations\SqliteEngineException.cs" />
+    <Compile Include="Engines\SqliteEngine.cs" />
+    <Compile Include="Engines\SqliteEngineException.cs" />
     <Compile Include="Messages\CashboxMessage.cs" />
     <Compile Include="Messages\RetrieveValue.cs" />
     <Compile Include="Messages\InMemoryEngineDataChange.cs" />
@@ -70,7 +71,6 @@
     <Compile Include="Messages\ListValuesForType.cs" />
     <Compile Include="DocumentSession.cs" />
     <Compile Include="Messages\ReturnException.cs" />
-    <Compile Include="Messages\Shutdown.cs" />
     <Compile Include="Messages\Startup.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Messages\StoreValue.cs" />

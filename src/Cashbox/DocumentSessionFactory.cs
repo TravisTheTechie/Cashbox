@@ -13,6 +13,7 @@
 namespace Cashbox
 {
     using System;
+    using Engines;
     using Implementations;
 
 

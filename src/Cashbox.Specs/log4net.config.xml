@@ -6,7 +6,6 @@
   <log4net>
     <root>
       <level value="DEBUG" />
-      <appender-ref ref="LogFileAppender" />
       <appender-ref ref="console" />
     </root>
 
@@ -15,18 +14,6 @@
         <param name="ConversionPattern" value="%d [%t] %-5p %c - %m%n" />
       </layout>
     </appender>
-    
-    <appender name="LogFileAppender" type="log4net.Appender.RollingFileAppender" >
-      <param name="File" value="output.log" />
-      <param name="AppendToFile" value="false" />
-      <rollingStyle value="Size" />
-      <maxSizeRollBackups value="4" />
-      <maximumFileSize value="10MB" />
-      <staticLogFileName value="true" />
-      <layout type="log4net.Layout.PatternLayout">
-        <param name="ConversionPattern" value="%-5p %d{yyyy-MM-dd hh:mm:ss} - %m%n" />
-      </layout>
-    </appender>
-    
+   
   </log4net>
 </configuration>

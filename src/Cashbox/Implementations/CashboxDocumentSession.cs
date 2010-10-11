@@ -116,7 +116,6 @@ namespace Cashbox.Implementations
 
 		public void Dispose()
 		{
-			MakeRequest<Shutdown, string>(new Shutdown());
 			_engine.Dispose();
 		}
 

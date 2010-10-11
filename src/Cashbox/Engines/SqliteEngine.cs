@@ -10,14 +10,13 @@
 // under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR 
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the 
 // specific language governing permissions and limitations under the License.
-namespace Cashbox.Implementations
+namespace Cashbox.Engines
 {
     using System;
     using System.Collections.Generic;
     using System.Data;
     using Community.CsharpSqlite.SQLiteClient;
     using log4net;
-    using Magnum.Extensions;
     using Messages;
     using Stact;
     using Stact.Internal;
@@ -26,7 +25,7 @@ namespace Cashbox.Implementations
     public class SqliteEngine :
         Engine
     {
-        static readonly ILog _logger = LogManager.GetLogger("Cashbox.Engine.SqliteEngine");
+        static readonly ILog _logger = LogManager.GetLogger("Cashbox.Engines.SqliteEngine");
 
         readonly SqliteConnection _connection;
         readonly Fiber _fiber = new ThreadFiber();
@@ -35,16 +34,12 @@ namespace Cashbox.Implementations
 
         public SqliteEngine(string filename)
         {
-            _connection = new SqliteConnection("Uri=file:{0}, Version=3".FormatWith(filename));
+            _connection = new SqliteConnection(string.Format("Uri=file:{0}, Version=3", filename));
 
             _subscription = _input.Connect(config =>
                 {
                     config.AddConsumerOf<Request<Startup>>()
                         .UsingConsumer(Startup)
-                        .HandleOnFiber(_fiber);
-
-                    config.AddConsumerOf<Request<Shutdown>>()
-                        .UsingConsumer(Shutdown)
                         .HandleOnFiber(_fiber);
 
                     config.AddConsumerOf<RemoveValue>()
@@ -67,6 +62,10 @@ namespace Cashbox.Implementations
 
         public void Dispose()
         {
+            _fiber.Shutdown(TimeSpan.FromSeconds(120));
+            _subscription.Disconnect();
+            _connection.Close();
+
             _subscription.Disconnect();
             _connection.Dispose();
         }
@@ -88,7 +87,7 @@ namespace Cashbox.Implementations
             {
                 _input.Request(message, channel);
 
-                if (!response.WaitUntilCompleted(180.Seconds()) && ex != null)
+                if (!response.WaitUntilCompleted(TimeSpan.FromSeconds(180)) && ex != null)
                     throw ex;
 
                 return response.Value;
@@ -102,8 +101,6 @@ namespace Cashbox.Implementations
 
         void StoreValue(StoreValue message)
         {
-            //_logger.DebugFormat("Storing key: {0}, value: {1}", message.Key, message.Value);
-            
             using (SqliteCommand cmd = _connection.CreateCommand())
             {
                 cmd.CommandText = "INSERT INTO store (key, value) VALUES (@key, @value)";
@@ -116,8 +113,6 @@ namespace Cashbox.Implementations
 
         void RetrieveListFromType(Request<ListValuesForType> message)
         {
-            _logger.DebugFormat("Retrieving list for {0}", message.Body.Key);
-
             try
             {
                 var items = new List<string>();
@@ -142,7 +137,6 @@ namespace Cashbox.Implementations
 
         void RetrieveValue(Request<RetrieveValue> message)
         {
-            //_logger.DebugFormat("Retrieving {0}", message.Body.Key);
             try
             {
                 using (SqliteCommand cmd = _connection.CreateCommand())
@@ -167,7 +161,6 @@ namespace Cashbox.Implementations
 
         void RemoveKeyFromSession(RemoveValue message)
         {
-            //_logger.DebugFormat("Removing key {0}", message.Key);
             using (SqliteCommand cmd = _connection.CreateCommand())
             {
                 cmd.CommandText = "DELETE FROM store WHERE key = @key";
@@ -209,22 +202,7 @@ namespace Cashbox.Implementations
             }
         }
 
-        void Shutdown(Request<Shutdown> message)
-        {
-            try
-            {
-                _fiber.Shutdown(180.Seconds());
-                _subscription.Disconnect();
-                _connection.Close();
-                Respond(message, string.Empty);
-            }
-            catch (Exception ex)
-            {
-                RespondWithException(message, ex);
-            }
-        }
-
-        void Respond<T, TK>(Request<TK> message, T response)
+        static void Respond<T, TK>(Request<TK> message, T response)
         {
             message.ResponseChannel.Send(new ReturnValue<T>
                 {
@@ -232,11 +210,11 @@ namespace Cashbox.Implementations
                 });
         }
 
-        void RespondWithException<T>(Request<T> message, Exception ex)
+        static void RespondWithException<T>(Request<T> message, Exception ex)
         {
             message.ResponseChannel.Send(new ReturnException
                 {
-                    Exception = new SqliteEngineException("Error with {0}".FormatWith(typeof(T).Name), ex)
+                    Exception = new SqliteEngineException(string.Format("Error with {0}", typeof(T).Name), ex)
                 });
         }
     }

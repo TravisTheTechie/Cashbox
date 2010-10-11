@@ -42,12 +42,6 @@ namespace Cashbox.Specs
                 sw.Stop();
 
                 Console.WriteLine("10k inserts: {0}ms", sw.ElapsedMilliseconds);
-
-                //sw.Reset();
-                //sw.Start();
-                //var count = session.List<NumericDocument>().Count();
-                //sw.Stop();
-                //Console.WriteLine("Getting a count of {0} records, {1}ms", count, sw.ElapsedMilliseconds);
             }
             swFull.Stop();
             Console.WriteLine("Spin up, insert, and shutdown: {0}ms", swFull.ElapsedMilliseconds);
@@ -61,7 +55,7 @@ namespace Cashbox.Specs
                 for (int i = 0; i < EventCount; i++)
                 {
                     var document = session.Retrieve<NumericDocument>(i.ToString());
-                    Assert.That(document, Is.Not.Null, "Document no found for record {0}".FormatWith(i));
+                    Assert.That(document, Is.Not.Null, "Document not found for record {0}".FormatWith(i));
                     int result = document.Number;
 
                     Assert.That(result, Is.EqualTo(i));
@@ -72,26 +66,30 @@ namespace Cashbox.Specs
                 Console.WriteLine("10k reads: {0}ms", sw.ElapsedMilliseconds);
             }
             swFull.Stop();
-            Console.WriteLine("Spin up, count, and shutdown: {0}ms", swFull.ElapsedMilliseconds);
+            Console.WriteLine("Spin up, assert each, and shutdown: {0}ms", swFull.ElapsedMilliseconds);
 
-            //using (DocumentSession session = DocumentSessionFactory.Create(storeFilename))
-            //{
-            //    var rand = new Random();
+            swFull.Reset();
+            swFull.Start();
+            using (DocumentSession session = DocumentSessionFactory.Create(storeFilename))
+            {
+                var rand = new Random();
 
-            //    var sw = new Stopwatch();
-            //    sw.Start();
-            //    for (int i = 0; i < EventCount/100; i++)
-            //    {
-            //        string key = rand.Next(EventCount - 1).ToString();
-            //        session.Delete<NumericDocument>(key);
-            //    }
-            //    sw.Stop();
-            //    int count = session.List<NumericDocument>().Count();
-            //    Console.WriteLine("{1} (of {2} attempted) deletes: {0}ms", sw.ElapsedMilliseconds, EventCount - count,
-            //                      EventCount/100);
-            //    // at least one delete should have happened
-            //    count.ShouldBeLessThan(EventCount - 1);
-            //}
+                var sw = new Stopwatch();
+                sw.Start();
+                for (int i = 0; i < EventCount / 100; i++)
+                {
+                    string key = rand.Next(EventCount - 1).ToString();
+                    session.Delete<NumericDocument>(key);
+                }
+                sw.Stop();
+                int count = session.List<NumericDocument>().Count();
+                Console.WriteLine("{1} (of {2} attempted) deletes: {0}ms", sw.ElapsedMilliseconds, EventCount - count,
+                                  EventCount / 100);
+                // at least one delete should have happened
+                count.ShouldBeLessThan(EventCount - 1);
+            }
+            swFull.Stop();
+            Console.WriteLine("Spin up, delete, count, and shutdown: {0}ms", swFull.ElapsedMilliseconds);
         }
     }
 }

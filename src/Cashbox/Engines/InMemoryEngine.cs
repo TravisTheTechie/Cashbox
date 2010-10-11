@@ -10,7 +10,7 @@
 // under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR 
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the 
 // specific language governing permissions and limitations under the License.
-namespace Cashbox.Implementations
+namespace Cashbox.Engines
 {
     using System;
     using System.Collections.Generic;
@@ -26,23 +26,22 @@ namespace Cashbox.Implementations
 
 
     public class InMemoryEngine :
-		Engine
+        Engine
     {
-        static readonly ILog _logger = LogManager.GetLogger("Cashbox.Engine.InMemoryEngine");
-
         protected static readonly FastTextSerializer Serializer = new FastTextSerializer();
+        static readonly ILog _logger = LogManager.GetLogger("Cashbox.Engines.InMemoryEngine");
         readonly Fiber _fiber = new ThreadFiber();
         readonly ChannelAdapter _input = new ChannelAdapter();
         readonly Action<Action> _needLockin;
         readonly ChannelConnection _subscription;
-    	string _filename;
+        string _filename;
 
         ManualResetEvent _saveCompleted;
         Dictionary<string, string> _store = new Dictionary<string, string>();
 
         public InMemoryEngine(string filename)
         {
-        	_filename = filename;
+            _filename = filename;
 
             _needLockin = act =>
                 {
@@ -54,13 +53,13 @@ namespace Cashbox.Implementations
 
             _subscription = _input.Connect(config =>
                 {
-                	config.AddConsumerOf<Request<Startup>>()
-                		.UsingConsumer(msg => { Load(); msg.ResponseChannel.Send(new ReturnValue<string>()); })
-                		.HandleOnFiber(_fiber);
-
-					config.AddConsumerOf<Request<Shutdown>>()
-						.UsingConsumer(msg => { Save(); msg.ResponseChannel.Send(new ReturnValue<string>()); })
-						.HandleOnFiber(_fiber);
+                    config.AddConsumerOf<Request<Startup>>()
+                        .UsingConsumer(msg =>
+                            {
+                                Load();
+                                msg.ResponseChannel.Send(new ReturnValue<string>());
+                            })
+                        .HandleOnFiber(_fiber);
 
                     config.AddConsumerOf<InMemoryEngineDataChange>()
                         .BufferFor(250.Milliseconds()) // quarter of a sec
@@ -87,20 +86,41 @@ namespace Cashbox.Implementations
 
         public void Dispose()
         {
-            //_logger.Info("Disposing");
             using (_saveCompleted = new ManualResetEvent(false))
             {
                 RegisterMemoryChange(string.Empty);
                 _saveCompleted.WaitOne(15.Seconds());
+                _fiber.Shutdown(45.Seconds());
                 _subscription.Disconnect();
             }
             _saveCompleted = null;
         }
 
-    	void RetrieveListFromType(Request<ListValuesForType> message)
+        public TResponse MakeRequest<TRequest, TResponse>(TRequest message) where TRequest : CashboxMessage
         {
-            //_logger.DebugFormat("Retrieving list for {0}", message.Body.Key);
+            var response = new Magnum.Future<TResponse>();
+            var channel = new ChannelAdapter();
 
+            using (channel.Connect(config =>
+                {
+                    config.AddConsumerOf<ReturnValue<TResponse>>()
+                        .UsingConsumer(msg => response.Complete(msg.Value));
+                }))
+            {
+                _input.Request(message, channel);
+
+                response.WaitUntilCompleted(5.Seconds());
+                return response.Value;
+            }
+        }
+
+        public void Send<T>(T message) where T : CashboxMessage
+        {
+            _input.Send(message);
+        }
+
+        void RetrieveListFromType(Request<ListValuesForType> message)
+        {
             List<string> values = null;
 
             _needLockin(() =>
@@ -117,33 +137,10 @@ namespace Cashbox.Implementations
                 });
         }
 
-    	public TResponse MakeRequest<TRequest, TResponse>(TRequest message) where TRequest : CashboxMessage
-    	{
-            var response = new Magnum.Future<TResponse>();
-            var channel = new ChannelAdapter();
-
-            using (channel.Connect(config =>
-                {
-                    config.AddConsumerOf<ReturnValue<TResponse>>()
-                        .UsingConsumer(msg => response.Complete(msg.Value));
-                }))
-            {
-                _input.Request(message, channel);
-
-                response.WaitUntilCompleted(5.Seconds());
-                return response.Value;
-            }
-    	}
-
-    	public void Send<T>(T message) where T : CashboxMessage
+        public void SetFilename(string filename)
         {
-            _input.Send(message);
+            _filename = filename;
         }
-
-		public void SetFilename(string filename)
-		{
-			_filename = filename;
-		}
 
         void RetrieveValue(Request<RetrieveValue> message)
         {
