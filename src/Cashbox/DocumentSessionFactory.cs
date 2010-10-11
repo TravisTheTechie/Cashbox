@@ -12,21 +12,22 @@
 // specific language governing permissions and limitations under the License.
 namespace Cashbox
 {
-    using System;
     using Engines;
     using Implementations;
 
 
 	public static class DocumentSessionFactory
 	{
-	    static Func<string, Engine> _engineFactory;
+	    public delegate Engine EngineFactory(string filename);
+        
+        static EngineFactory _engineFactory;
 
         static DocumentSessionFactory()
         {
             _engineFactory = str => new SqliteEngine(str);
         }
 
-	    public static void SetEngineFactory(Func<string, Engine> engineFactory)
+        public static void SetEngineFactory(EngineFactory engineFactory)
 	    {
 	        _engineFactory = engineFactory;
 	    }
