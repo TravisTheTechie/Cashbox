@@ -1,207 +1,214 @@
-// Copyright 2010 Travis Smith
-//  
-// Licensed under the Apache License, Version 2.0 (the "License"); you may not use 
-// this file except in compliance with the License. You may obtain a copy of the 
-// License at 
+// Copyright (c) 2010 Travis Smith
 // 
-//     http://www.apache.org/licenses/LICENSE-2.0 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
 // 
-// Unless required by applicable law or agreed to in writing, software distributed 
-// under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR 
-// CONDITIONS OF ANY KIND, either express or implied. See the License for the 
-// specific language governing permissions and limitations under the License.
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+// 
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
 namespace Cashbox.Engines
 {
-    using System;
-    using System.Collections.Generic;
-    using System.IO;
-    using System.Linq;
-    using System.Threading;
-    using log4net;
-    using Magnum.Extensions;
-    using Magnum.Serialization;
-    using Messages;
-    using Stact;
-    using Stact.Internal;
+	using System;
+	using System.Collections.Generic;
+	using System.IO;
+	using System.Linq;
+	using System.Threading;
+	using log4net;
+	using Magnum.Extensions;
+	using Magnum.Serialization;
+	using Messages;
+	using Stact;
+	using Stact.Internal;
 
 
-    public class InMemoryEngine :
-        Engine
-    {
-        protected static readonly FastTextSerializer Serializer = new FastTextSerializer();
-        static readonly ILog _logger = LogManager.GetLogger("Cashbox.Engines.InMemoryEngine");
-        readonly Fiber _fiber = new ThreadFiber();
-        readonly ChannelAdapter _input = new ChannelAdapter();
-        readonly Action<Action> _needLockin;
-        readonly ChannelConnection _subscription;
-        string _filename;
+	public class InMemoryEngine :
+		Engine
+	{
+		protected static readonly FastTextSerializer Serializer = new FastTextSerializer();
+		static readonly ILog _logger = LogManager.GetLogger("Cashbox.Engines.InMemoryEngine");
+		readonly Fiber _fiber = new ThreadFiber();
+		readonly ChannelAdapter _input = new ChannelAdapter();
+		readonly Action<Action> _needLockin;
+		readonly ChannelConnection _subscription;
+		string _filename;
 
-        ManualResetEvent _saveCompleted;
-        Dictionary<string, string> _store = new Dictionary<string, string>();
+		ManualResetEvent _saveCompleted;
+		Dictionary<string, string> _store = new Dictionary<string, string>();
 
-        public InMemoryEngine(string filename)
-        {
-            _filename = filename;
+		public InMemoryEngine(string filename)
+		{
+			_filename = filename;
 
-            _needLockin = act =>
-                {
-                    lock (_store)
-                    {
-                        act();
-                    }
-                };
+			_needLockin = act =>
+				{
+					lock (_store)
+					{
+						act();
+					}
+				};
 
-            _subscription = _input.Connect(config =>
-                {
-                    config.AddConsumerOf<Request<Startup>>()
-                        .UsingConsumer(msg =>
-                            {
-                                Load();
-                                msg.ResponseChannel.Send(new ReturnValue<string>());
-                            })
-                        .HandleOnFiber(_fiber);
+			_subscription = _input.Connect(config =>
+				{
+					config.AddConsumerOf<Request<Startup>>()
+						.UsingConsumer(msg =>
+							{
+								Load();
+								msg.ResponseChannel.Send(new ReturnValue<string>());
+							})
+						.HandleOnFiber(_fiber);
 
-                    config.AddConsumerOf<InMemoryEngineDataChange>()
-                        .BufferFor(250.Milliseconds()) // quarter of a sec
-                        .UsingConsumer(msgs => Save())
-                        .HandleOnFiber(_fiber);
+					config.AddConsumerOf<InMemoryEngineDataChange>()
+						.BufferFor(250.Milliseconds()) // quarter of a sec
+						.UsingConsumer(msgs => Save())
+						.HandleOnFiber(_fiber);
 
-                    config.AddConsumerOf<RemoveValue>()
-                        .UsingConsumer(RemoveKeyFromSession)
-                        .HandleOnFiber(_fiber);
+					config.AddConsumerOf<RemoveValue>()
+						.UsingConsumer(RemoveKeyFromSession)
+						.HandleOnFiber(_fiber);
 
-                    config.AddConsumerOf<Request<RetrieveValue>>()
-                        .UsingConsumer(RetrieveValue)
-                        .HandleOnFiber(_fiber);
+					config.AddConsumerOf<Request<RetrieveValue>>()
+						.UsingConsumer(RetrieveValue)
+						.HandleOnFiber(_fiber);
 
-                    config.AddConsumerOf<Request<ListValuesForType>>()
-                        .UsingConsumer(RetrieveListFromType)
-                        .HandleOnFiber(_fiber);
+					config.AddConsumerOf<Request<ListValuesForType>>()
+						.UsingConsumer(RetrieveListFromType)
+						.HandleOnFiber(_fiber);
 
-                    config.AddConsumerOf<StoreValue>()
-                        .UsingConsumer(StoreValue)
-                        .HandleOnFiber(_fiber);
-                });
-        }
+					config.AddConsumerOf<StoreValue>()
+						.UsingConsumer(StoreValue)
+						.HandleOnFiber(_fiber);
+				});
+		}
 
-        public void Dispose()
-        {
-            using (_saveCompleted = new ManualResetEvent(false))
-            {
-                RegisterMemoryChange(string.Empty);
-                _saveCompleted.WaitOne(15.Seconds());
-                _fiber.Shutdown(45.Seconds());
-                _subscription.Disconnect();
-            }
-            _saveCompleted = null;
-        }
+		public void Dispose()
+		{
+			using (_saveCompleted = new ManualResetEvent(false))
+			{
+				RegisterMemoryChange(string.Empty);
+				_saveCompleted.WaitOne(15.Seconds());
+				_fiber.Shutdown(45.Seconds());
+				_subscription.Disconnect();
+			}
+			_saveCompleted = null;
+		}
 
-        public TResponse MakeRequest<TRequest, TResponse>(TRequest message) where TRequest : CashboxMessage
-        {
-            var response = new Magnum.Future<TResponse>();
-            var channel = new ChannelAdapter();
+		public TResponse MakeRequest<TRequest, TResponse>(TRequest message) where TRequest : CashboxMessage
+		{
+			var response = new Magnum.Future<TResponse>();
+			var channel = new ChannelAdapter();
 
-            using (channel.Connect(config =>
-                {
-                    config.AddConsumerOf<ReturnValue<TResponse>>()
-                        .UsingConsumer(msg => response.Complete(msg.Value));
-                }))
-            {
-                _input.Request(message, channel);
+			using (channel.Connect(config =>
+				{
+					config.AddConsumerOf<ReturnValue<TResponse>>()
+						.UsingConsumer(msg => response.Complete(msg.Value));
+				}))
+			{
+				_input.Request(message, channel);
 
-                response.WaitUntilCompleted(5.Seconds());
-                return response.Value;
-            }
-        }
+				response.WaitUntilCompleted(5.Seconds());
+				return response.Value;
+			}
+		}
 
-        public void Send<T>(T message) where T : CashboxMessage
-        {
-            _input.Send(message);
-        }
+		public void Send<T>(T message) where T : CashboxMessage
+		{
+			_input.Send(message);
+		}
 
-        void RetrieveListFromType(Request<ListValuesForType> message)
-        {
-            List<string> values = null;
+		void RetrieveListFromType(Request<ListValuesForType> message)
+		{
+			List<string> values = null;
 
-            _needLockin(() =>
-                {
-                    values = _store
-                        .Where(kvp => kvp.Key.StartsWith(message.Body.Key))
-                        .Select(kvp => kvp.Value)
-                        .ToList();
-                });
+			_needLockin(() =>
+				{
+					values = _store
+						.Where(kvp => kvp.Key.StartsWith(message.Body.Key))
+						.Select(kvp => kvp.Value)
+						.ToList();
+				});
 
-            message.ResponseChannel.Send(new ReturnValue<List<string>>
-                {
-                    Value = values
-                });
-        }
+			message.ResponseChannel.Send(new ReturnValue<List<string>>
+				{
+					Value = values
+				});
+		}
 
-        public void SetFilename(string filename)
-        {
-            _filename = filename;
-        }
+		public void SetFilename(string filename)
+		{
+			_filename = filename;
+		}
 
-        void RetrieveValue(Request<RetrieveValue> message)
-        {
-            string text = null;
+		void RetrieveValue(Request<RetrieveValue> message)
+		{
+			string text = null;
 
-            _needLockin(() =>
-                {
-                    if (_store.ContainsKey(message.Body.Key))
-                        text = _store[message.Body.Key];
-                });
+			_needLockin(() =>
+				{
+					if (_store.ContainsKey(message.Body.Key))
+						text = _store[message.Body.Key];
+				});
 
-            message.ResponseChannel.Send(new ReturnValue<string>
-                {
-                    Key = message.Body.Key,
-                    Value = text
-                });
-        }
+			message.ResponseChannel.Send(new ReturnValue<string>
+				{
+					Key = message.Body.Key,
+					Value = text
+				});
+		}
 
-        void RemoveKeyFromSession(RemoveValue message)
-        {
-            _needLockin(() => _store.Remove(message.Key));
-            RegisterMemoryChange(message.Key);
-        }
+		void RemoveKeyFromSession(RemoveValue message)
+		{
+			_needLockin(() => _store.Remove(message.Key));
+			RegisterMemoryChange(message.Key);
+		}
 
-        void RegisterMemoryChange(string key)
-        {
-            _input.Send(new InMemoryEngineDataChange
-                {
-                    Key = key
-                });
-        }
+		void RegisterMemoryChange(string key)
+		{
+			_input.Send(new InMemoryEngineDataChange
+				{
+					Key = key
+				});
+		}
 
-        void StoreValue(StoreValue message)
-        {
-            _needLockin(() =>
-                {
-                    if (!_store.ContainsKey(message.Key))
-                        _store.Add(message.Key, message.Value);
-                    else
-                        _store[message.Key] = message.Value;
-                });
+		void StoreValue(StoreValue message)
+		{
+			_needLockin(() =>
+				{
+					if (!_store.ContainsKey(message.Key))
+						_store.Add(message.Key, message.Value);
+					else
+						_store[message.Key] = message.Value;
+				});
 
-            RegisterMemoryChange(message.Key);
-        }
+			RegisterMemoryChange(message.Key);
+		}
 
-        void Load()
-        {
-            if (File.Exists(_filename))
-            {
-                string value = File.ReadAllText(_filename);
-                _needLockin(() => { _store = Serializer.Deserialize<Dictionary<string, string>>(value); });
-            }
-        }
+		void Load()
+		{
+			if (File.Exists(_filename))
+			{
+				string value = File.ReadAllText(_filename);
+				_needLockin(() => { _store = Serializer.Deserialize<Dictionary<string, string>>(value); });
+			}
+		}
 
-        void Save()
-        {
-            string text = string.Empty;
-            _needLockin(() => text = Serializer.Serialize(_store));
-            File.WriteAllText(_filename, text);
-            if (_saveCompleted != null)
-                _saveCompleted.Set();
-        }
-    }
+		void Save()
+		{
+			string text = string.Empty;
+			_needLockin(() => text = Serializer.Serialize(_store));
+			File.WriteAllText(_filename, text);
+			if (_saveCompleted != null)
+				_saveCompleted.Set();
+		}
+	}
 }
