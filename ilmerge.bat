@@ -1,0 +1,2 @@
+cd src\Cashbox\bin\Release
+..\..\..\..\lib\ILMerge\ILMerge.exe/internalize /target:dll /out:..\Cashbox.dll /ndebug /allowDup Cashbox.dll Community.CsharpSqlite.dll Community.CsharpSqlite.SQLiteClient.dll Magnum.dll Stact.dll System.Threading.dll
