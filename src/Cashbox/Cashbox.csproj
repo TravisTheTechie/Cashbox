@@ -72,6 +72,7 @@
     <Compile Include="DocumentSession.cs" />
     <Compile Include="Messages\ReturnException.cs" />
     <Compile Include="Messages\Startup.cs" />
+    <Compile Include="Messages\TypedCashboxMessage.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Messages\StoreValue.cs" />
     <Compile Include="Messages\RemoveValue.cs" />

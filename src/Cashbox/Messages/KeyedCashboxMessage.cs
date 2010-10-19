@@ -20,7 +20,7 @@
 namespace Cashbox.Messages
 {
 	public class KeyedCashboxMessage :
-		CashboxMessage
+		TypedCashboxMessage
 	{
 		public string Key { get; set; }
 	}

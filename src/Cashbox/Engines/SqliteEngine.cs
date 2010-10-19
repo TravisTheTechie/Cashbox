@@ -79,13 +79,13 @@ namespace Cashbox.Engines
 
 		public TResponse MakeRequest<TRequest, TResponse>(TRequest message) where TRequest : CashboxMessage
 		{
-			var response = new Magnum.Future<TResponse>();
+			var response = new Magnum.Future<object>();
 			var channel = new ChannelAdapter();
 			Exception ex = null;
 
 			using (channel.Connect(config =>
 				{
-					config.AddConsumerOf<ReturnValue<TResponse>>()
+					config.AddConsumerOf<ReturnValue>()
 						.UsingConsumer(msg => response.Complete(msg.Value));
 
 					config.AddConsumerOf<ReturnException>()
@@ -97,7 +97,7 @@ namespace Cashbox.Engines
 				if (!response.WaitUntilCompleted(TimeSpan.FromSeconds(180)) && ex != null)
 					throw ex;
 
-				return response.Value;
+				return (TResponse) response.Value;
 			}
 		}
 
@@ -211,8 +211,9 @@ namespace Cashbox.Engines
 
 		static void Respond<T, TK>(Request<TK> message, T response)
 		{
-			message.ResponseChannel.Send(new ReturnValue<T>
+			message.ResponseChannel.Send(new ReturnValue
 				{
+                    DocumentType = typeof(T),
 					Value = response
 				});
 		}

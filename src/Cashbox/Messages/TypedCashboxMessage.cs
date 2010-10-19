@@ -19,9 +19,12 @@
 // THE SOFTWARE.
 namespace Cashbox.Messages
 {
-	public class KeyValueCashboxMessage :
-		KeyedCashboxMessage
-	{
-		public object Value { get; set; }
-	}
+    using System;
+
+
+    public class TypedCashboxMessage : 
+        CashboxMessage
+    {
+        public Type DocumentType { get; set; }
+    }
 }

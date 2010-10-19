@@ -44,7 +44,7 @@ namespace Cashbox.Engines
 		string _filename;
 
 		ManualResetEvent _saveCompleted;
-		Dictionary<string, string> _store = new Dictionary<string, string>();
+		Dictionary<string, object > _store = new Dictionary<string, object>();
 
 		public InMemoryEngine(string filename)
 		{
@@ -64,7 +64,7 @@ namespace Cashbox.Engines
 						.UsingConsumer(msg =>
 							{
 								Load();
-								msg.ResponseChannel.Send(new ReturnValue<string>());
+								msg.ResponseChannel.Send(new ReturnValue());
 							})
 						.HandleOnFiber(_fiber);
 
@@ -110,8 +110,8 @@ namespace Cashbox.Engines
 
 			using (channel.Connect(config =>
 				{
-					config.AddConsumerOf<ReturnValue<TResponse>>()
-						.UsingConsumer(msg => response.Complete(msg.Value));
+					config.AddConsumerOf<ReturnValue>()
+						.UsingConsumer(msg => response.Complete((TResponse)msg.Value));
 				}))
 			{
 				_input.Request(message, channel);
@@ -128,7 +128,7 @@ namespace Cashbox.Engines
 
 		void RetrieveListFromType(Request<ListValuesForType> message)
 		{
-			List<string> values = null;
+			List<object> values = null;
 
 			_needLockin(() =>
 				{
@@ -138,7 +138,7 @@ namespace Cashbox.Engines
 						.ToList();
 				});
 
-			message.ResponseChannel.Send(new ReturnValue<List<string>>
+			message.ResponseChannel.Send(new ReturnValue
 				{
 					Value = values
 				});
@@ -151,7 +151,7 @@ namespace Cashbox.Engines
 
 		void RetrieveValue(Request<RetrieveValue> message)
 		{
-			string text = null;
+			object text = null;
 
 			_needLockin(() =>
 				{
@@ -159,7 +159,7 @@ namespace Cashbox.Engines
 						text = _store[message.Body.Key];
 				});
 
-			message.ResponseChannel.Send(new ReturnValue<string>
+			message.ResponseChannel.Send(new ReturnValue
 				{
 					Key = message.Body.Key,
 					Value = text
@@ -198,7 +198,7 @@ namespace Cashbox.Engines
 			if (File.Exists(_filename))
 			{
 				string value = File.ReadAllText(_filename);
-				_needLockin(() => { _store = Serializer.Deserialize<Dictionary<string, string>>(value); });
+				_needLockin(() => { _store = Serializer.Deserialize<Dictionary<string, object>>(value); });
 			}
 		}
 
