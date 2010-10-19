@@ -9,7 +9,6 @@ TestResult.xml
 *.userprefs
 *.cached
 *.suo
-*.ReSharper
 *.pidb
 *.swp
 
