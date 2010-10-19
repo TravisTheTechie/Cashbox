@@ -17,6 +17,8 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
+using Magnum.Serialization;
+
 namespace Cashbox.Specs
 {
 	using System.IO;
@@ -31,6 +33,7 @@ namespace Cashbox.Specs
 		[Test]
 		public void Robbin_the_in_memory_bank()
 		{
+		    FastTextSerializer Serializer = new FastTextSerializer();
 			DocumentSessionFactory.SetEngineFactory(str => new InMemoryEngine(str));
 
 			RobTheBank(InsertStoreName);

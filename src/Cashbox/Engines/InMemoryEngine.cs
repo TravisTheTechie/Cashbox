@@ -17,6 +17,9 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
+using System.Linq.Expressions;
+using Magnum.Reflection;
+
 namespace Cashbox.Engines
 {
 	using System;
@@ -44,7 +47,7 @@ namespace Cashbox.Engines
 		string _filename;
 
 		ManualResetEvent _saveCompleted;
-		Dictionary<string, object > _store = new Dictionary<string, object>();
+		Dictionary<string, string> _store = new Dictionary<string, string>();
 
 		public InMemoryEngine(string filename)
 		{
@@ -134,9 +137,12 @@ namespace Cashbox.Engines
 				{
 					values = _store
 						.Where(kvp => kvp.Key.StartsWith(message.Body.Key))
-						.Select(kvp => kvp.Value)
+						.Select(kvp => kvp.Value )
+                        .Select(str => Serializer.FastInvoke<FastTextSerializer, object>(new[] {message.Body.DocumentType}, "Deserialize", str))
 						.ToList();
 				});
+
+
 
 			message.ResponseChannel.Send(new ReturnValue
 				{
@@ -182,12 +188,14 @@ namespace Cashbox.Engines
 
 		void StoreValue(StoreValue message)
 		{
+		    var serializedValue = Serializer.FastInvoke<FastTextSerializer, string>(new[] {message.DocumentType}, "Serialize", message.Value);
+
 			_needLockin(() =>
 				{
 					if (!_store.ContainsKey(message.Key))
-						_store.Add(message.Key, message.Value);
+                        _store.Add(message.Key, serializedValue);
 					else
-						_store[message.Key] = message.Value;
+                        _store[message.Key] = serializedValue;
 				});
 
 			RegisterMemoryChange(message.Key);
@@ -198,7 +206,10 @@ namespace Cashbox.Engines
 			if (File.Exists(_filename))
 			{
 				string value = File.ReadAllText(_filename);
-				_needLockin(() => { _store = Serializer.Deserialize<Dictionary<string, object>>(value); });
+				_needLockin(() =>
+				{
+				    _store = Serializer.Deserialize<Dictionary<string, string>>(value);
+				});
 			}
 		}
 
