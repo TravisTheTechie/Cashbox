@@ -63,7 +63,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ContextSetup.cs" />
-    <Compile Include="FastTestSerializerTest.cs" />
     <Compile Include="MaskedBanditBase.cs" />
     <Compile Include="MaskedBandit_InMemory.cs" />
     <Compile Include="DocumentSessionSpecs.cs" />
