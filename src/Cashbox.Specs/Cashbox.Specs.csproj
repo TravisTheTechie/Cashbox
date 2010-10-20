@@ -41,7 +41,7 @@
     <Reference Include="log4net">
       <HintPath>..\..\lib\log4net\log4net.dll</HintPath>
     </Reference>
-    <Reference Include="Magnum, Version=1.1.0.0, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="Magnum, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\lib\Magnum\Magnum.dll</HintPath>
     </Reference>
@@ -63,6 +63,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ContextSetup.cs" />
+    <Compile Include="FastTestSerializerTest.cs" />
     <Compile Include="MaskedBanditBase.cs" />
     <Compile Include="MaskedBandit_InMemory.cs" />
     <Compile Include="DocumentSessionSpecs.cs" />

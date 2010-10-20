@@ -33,7 +33,6 @@ namespace Cashbox.Specs
 		[Test]
 		public void Robbin_the_in_memory_bank()
 		{
-		    FastTextSerializer Serializer = new FastTextSerializer();
 			DocumentSessionFactory.SetEngineFactory(str => new InMemoryEngine(str));
 
 			RobTheBank(InsertStoreName);

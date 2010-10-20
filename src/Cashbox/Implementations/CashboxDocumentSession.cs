@@ -17,12 +17,12 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
+
 namespace Cashbox.Implementations
 {
 	using System;
 	using System.Collections.Generic;
 	using Magnum.Extensions;
-	using Magnum.Serialization;
 	using Messages;
 
 
@@ -30,7 +30,6 @@ namespace Cashbox.Implementations
 		DocumentSession
 	{
 		readonly Engine _engine;
-		readonly FastTextSerializer _serializer = new FastTextSerializer();
 
 		public CashboxDocumentSession(Engine engine)
 		{
@@ -42,67 +41,70 @@ namespace Cashbox.Implementations
 		{
 			string realKey = KeyConverter<T>(key);
 
-			string text = MakeRequest<RetrieveValue, string>(new RetrieveValue
+			var value = MakeRequest<RetrieveValue, object>(new RetrieveValue
 				{
-					Key = realKey
+					Key = realKey,
+                    DocumentType = typeof(T)
 				});
 
-			if (text == null)
+			if (value == null)
 				return default(T);
 
-			return _serializer.Deserialize<T>(text);
+		    return value as T;
 		}
 
 		public T RetrieveWithDefault<T>(string key, Func<T> defaultCreation) where T : class
 		{
 			string realKey = KeyConverter<T>(key);
 
-			string text = MakeRequest<RetrieveValue, string>(new RetrieveValue
+			var value = MakeRequest<RetrieveValue, object>(new RetrieveValue
 				{
 					Key = realKey
 				});
 
-			if (string.IsNullOrEmpty(text))
+			if (value == null)
 			{
 				T defaultValue = defaultCreation();
-				string defaultText = _serializer.Serialize(defaultValue);
 				Send(new StoreValue
 					{
 						Key = realKey,
-						Value = defaultText
+						Value = defaultValue,
+                        DocumentType = typeof(T)
 					});
 				return defaultValue;
 			}
 
-			return _serializer.Deserialize<T>(text);
+		    return value as T;
 		}
 
 		public void Store<T>(string key, T document) where T : class
 		{
 			string realKey = KeyConverter<T>(key);
-			string text = _serializer.Serialize(document);
 
 			Send(new StoreValue
 				{
 					Key = realKey,
-					Value = text
+					Value = document,
+                    DocumentType = typeof(T)
+                 
 				});
 		}
 
 		public IEnumerable<T> List<T>() where T : class
 		{
 			string keyStart = KeyConverter<T>(string.Empty);
-			List<string> values = null;
+			List<object> values = null;
 
-			values = MakeRequest<ListValuesForType, List<string>>(new ListValuesForType
+			values = MakeRequest<ListValuesForType, List<object>>(new ListValuesForType
 				{
-					Key = keyStart
+					Key = keyStart,
+                    DocumentType = typeof(T)
 				});
 
-			if (values == null)
-				values = new List<string>();
+            if (values == null)
+                return new List<T>();
 
-			return values.ConvertAll(str => _serializer.Deserialize<T>(str));
+		    return values.ConvertAll(value => value as T);
 		}
 
 		public void Delete<T>(string key) where T : class
