@@ -60,6 +60,7 @@ namespace Cashbox.Specs
 		[Then]
 		public void It_should_be_retrievable()
 		{
+		    
 			Session.Retrieve<TestDocument1>(Key).ShouldNotBeNull();
 		}
 

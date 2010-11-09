@@ -20,7 +20,7 @@
 namespace Cashbox.Messages
 {
 	public class StoreValue :
-		KeyValueCashboxMessage<string>
+		KeyValueCashboxMessage
 	{
 	}
 }

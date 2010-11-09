@@ -19,8 +19,8 @@
 // THE SOFTWARE.
 namespace Cashbox.Messages
 {
-	public class ReturnValue<T> :
-		KeyValueCashboxMessage<T>
-	{
-	}
+    public class ReturnValue :
+        KeyValueCashboxMessage
+    {
+    }
 }
