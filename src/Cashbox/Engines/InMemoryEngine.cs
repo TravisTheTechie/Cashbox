@@ -17,9 +17,6 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
-using System.Linq.Expressions;
-using Magnum.Reflection;
-
 namespace Cashbox.Engines
 {
 	using System;
@@ -29,6 +26,7 @@ namespace Cashbox.Engines
 	using System.Threading;
 	using log4net;
 	using Magnum.Extensions;
+	using Magnum.Reflection;
 	using Magnum.Serialization;
 	using Messages;
 	using Stact;
@@ -48,12 +46,6 @@ namespace Cashbox.Engines
 
 		ManualResetEvent _saveCompleted;
 		Dictionary<string, string> _store = new Dictionary<string, string>();
-
-        // Private methods to handle some oddities we're seeing in Magnum
-        // ReSharper disable UnusedMember.Local
-        string Serialize<T>(T obj) { return Serializer.Serialize<T>(obj); }
-        object Deserialize<T>(string text) { return Serializer.Deserialize<T>(text); }
-        // ReSharper restore UnusedMember.Local
 
 		public InMemoryEngine(string filename)
 		{
@@ -80,19 +72,19 @@ namespace Cashbox.Engines
 					config.AddConsumerOf<InMemoryEngineDataChange>()
 						.BufferFor(250.Milliseconds()) // quarter of a sec
 						.UsingConsumer(msgs => Save())
-                        .HandleOnFiber(_fiber);
+						.HandleOnFiber(_fiber);
 
 					config.AddConsumerOf<RemoveValue>()
 						.UsingConsumer(RemoveKeyFromSession)
-                        .HandleOnFiber(_fiber);
+						.HandleOnFiber(_fiber);
 
 					config.AddConsumerOf<Request<RetrieveValue>>()
 						.UsingConsumer(RetrieveValue)
-                        .HandleOnFiber(_fiber);
+						.HandleOnFiber(_fiber);
 
 					config.AddConsumerOf<Request<ListValuesForType>>()
 						.UsingConsumer(RetrieveListFromType)
-                        .HandleOnFiber(_fiber);
+						.HandleOnFiber(_fiber);
 
 					config.AddConsumerOf<StoreValue>()
 						.UsingConsumer(StoreValue)
@@ -135,6 +127,16 @@ namespace Cashbox.Engines
 			_input.Send(message);
 		}
 
+		string Serialize<T>(T obj)
+		{
+			return Serializer.Serialize(obj);
+		}
+
+		object Deserialize<T>(string text)
+		{
+			return Serializer.Deserialize<T>(text);
+		}
+
 		void RetrieveListFromType(Request<ListValuesForType> message)
 		{
 			List<object> values = null;
@@ -143,11 +145,10 @@ namespace Cashbox.Engines
 				{
 					values = _store
 						.Where(kvp => kvp.Key.StartsWith(message.Body.Key))
-						.Select(kvp => kvp.Value )
-                        .Select(str => this.FastInvoke<InMemoryEngine, object>(new[] {message.Body.DocumentType}, "Deserialize", str))
+						.Select(kvp => kvp.Value)
+						.Select(str => this.FastInvoke<InMemoryEngine, object>(new[] {message.Body.DocumentType}, "Deserialize", str))
 						.ToList();
 				});
-
 
 
 			message.ResponseChannel.Send(new ReturnValue
@@ -174,7 +175,7 @@ namespace Cashbox.Engines
 			message.ResponseChannel.Send(new ReturnValue
 				{
 					Key = message.Body.Key,
-                    Value = this.FastInvoke<InMemoryEngine, object>(new[] { message.Body.DocumentType }, "Deserialize", text) 
+					Value = this.FastInvoke<InMemoryEngine, object>(new[] {message.Body.DocumentType}, "Deserialize", text)
 				});
 		}
 
@@ -194,14 +195,15 @@ namespace Cashbox.Engines
 
 		void StoreValue(StoreValue message)
 		{
-		    var serializedValue = this.FastInvoke<InMemoryEngine, string>(new[] {message.DocumentType}, "Serialize", message.Value);
+			string serializedValue = this.FastInvoke<InMemoryEngine, string>(new[] {message.DocumentType}, "Serialize",
+			                                                                 message.Value);
 
 			_needLockin(() =>
 				{
 					if (!_store.ContainsKey(message.Key))
-                        _store.Add(message.Key, serializedValue);
+						_store.Add(message.Key, serializedValue);
 					else
-                        _store[message.Key] = serializedValue;
+						_store[message.Key] = serializedValue;
 				});
 
 			RegisterMemoryChange(message.Key);
@@ -212,10 +214,7 @@ namespace Cashbox.Engines
 			if (File.Exists(_filename))
 			{
 				string value = File.ReadAllText(_filename);
-				_needLockin(() =>
-				{
-				    _store = Serializer.Deserialize<Dictionary<string, string>>(value);
-				});
+				_needLockin(() => { _store = Serializer.Deserialize<Dictionary<string, string>>(value); });
 			}
 		}
 
