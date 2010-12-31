@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2010 Travis Smith
+// Copyright (c) 2010 Travis Smith
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,53 +22,34 @@ namespace Cashbox.Engines.FileStorage
 	using System.IO;
 
 
-	public class StreamStorage
+	public static class StreamExtensions
 	{
-		readonly Stream _dataStream;
-
-		public StreamStorage(Stream dataStream)
+		public static void SeekStart(this Stream stream)
 		{
-			_dataStream = dataStream;
-
-			// reset stream to the start
-			_dataStream.SeekStart();
-
-			if (_dataStream.Length > 0)
-				LoadHeader();
-			else
-				WriteNewHeader();
+			stream.Seek(0, SeekOrigin.Begin);
 		}
 
-		public StreamHeader Header { get; set; }
-
-		void WriteNewHeader()
+		public static void SeekEnd(this Stream stream)
 		{
-			Header = new StreamHeader
-				{
-					Version = 1
-				};
-
-			_dataStream.WriteStreamHeader(Header);
+			stream.Seek(0, SeekOrigin.End);
 		}
 
-		void LoadHeader()
+		public static void SeekLocation(this Stream stream, long position)
 		{
-			var buffer = new byte[1];
-			_dataStream.Read(buffer, 0, 1);
-
-			Header = new StreamHeader
-				{
-					Version = buffer[0]
-				};
+			stream.Seek(position, SeekOrigin.Begin);
 		}
 
-
-		public long Store(RecordHeader header, byte[] data)
+		public static void MovePositionForward(this Stream stream, long offset)
 		{
-			_dataStream.SeekStart();
-			_dataStream.WriteRecordHeader(header);
-			_dataStream.Write(data);
-			return _dataStream.Position;
+			stream.Seek(offset, SeekOrigin.Current);
+		}
+
+		public static void Write(this Stream stream, byte[] data)
+		{
+			if (data == null || data.Length == 0)
+				return;
+
+			stream.Write(data, 0, data.Length);
 		}
 	}
 }

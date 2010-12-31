@@ -22,53 +22,31 @@ namespace Cashbox.Engines.FileStorage
 	using System.IO;
 
 
-	public class StreamStorage
+	public static class RecordHeaderExtentions
 	{
-		readonly Stream _dataStream;
-
-		public StreamStorage(Stream dataStream)
+		public static void WriteRecordHeader(this Stream stream, RecordHeader header)
 		{
-			_dataStream = dataStream;
-
-			// reset stream to the start
-			_dataStream.SeekStart();
-
-			if (_dataStream.Length > 0)
-				LoadHeader();
-			else
-				WriteNewHeader();
+			byte[] data = StreamStorageBinarySerializer.SerializeRecordHeader(header);
+			stream.Write(data);
 		}
 
-		public StreamHeader Header { get; set; }
-
-		void WriteNewHeader()
+		public static RecordHeader ReadRecordHeader(this Stream stream)
 		{
-			Header = new StreamHeader
-				{
-					Version = 1
-				};
+			return StreamStorageBinarySerializer.DeserializerRecordHeader(stream);
+		}
+	}
 
-			_dataStream.WriteStreamHeader(Header);
+	public static class StreamHeaderExtentions
+	{
+		public static void WriteStreamHeader(this Stream stream, StreamHeader header)
+		{
+			byte[] data = StreamStorageBinarySerializer.SerializeStreamHeader(header);
+			stream.Write(data);
 		}
 
-		void LoadHeader()
+		public static StreamHeader ReadRecordHeader(this Stream stream)
 		{
-			var buffer = new byte[1];
-			_dataStream.Read(buffer, 0, 1);
-
-			Header = new StreamHeader
-				{
-					Version = buffer[0]
-				};
-		}
-
-
-		public long Store(RecordHeader header, byte[] data)
-		{
-			_dataStream.SeekStart();
-			_dataStream.WriteRecordHeader(header);
-			_dataStream.Write(data);
-			return _dataStream.Position;
+			return StreamStorageBinarySerializer.DeserializerStreamHeader(stream);
 		}
 	}
 }

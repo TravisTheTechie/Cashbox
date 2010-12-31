@@ -26,10 +26,5 @@ namespace Cashbox.Engines.FileStorage
 		public int RecordSize { get; set; }
 
 		public StorageActions Action { get; set; }
-
-		public byte[] ToBytes()
-		{
-			return new[] {(byte)HeaderVersion, (byte)RecordSize, (byte)Action};
-		}
 	}
 }

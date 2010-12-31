@@ -22,10 +22,5 @@ namespace Cashbox.Engines.FileStorage
 	public class StreamHeader
 	{
 		public int Version { get; set; }
-
-		public byte[] ToBytes()
-		{
-			return new[] {(byte)Version};
-		}
 	}
 }

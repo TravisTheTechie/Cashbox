@@ -19,6 +19,7 @@
 // THE SOFTWARE.
 namespace Cashbox.Specs.FileStorage
 {
+	using System;
 	using System.IO;
 	using Engines.FileStorage;
 	using Magnum.TestFramework;
@@ -58,6 +59,7 @@ namespace Cashbox.Specs.FileStorage
 		StreamStorageSpecsBase
 	{
 		long _streamLocation;
+		long _targetSize;
 
 		[When]
 		public void Store_is_called_with_data()
@@ -71,13 +73,16 @@ namespace Cashbox.Specs.FileStorage
 					Action = StorageActions.Store
 				};
 
+			// the "size" of RecordHeader will have to managed here
+			_targetSize = data.Length + sizeof(Int32) * 3;
+
 			_streamLocation = Storage.Store(header, data);
 		}
 
 		[Then]
 		public void Stream_location_should_be_greater_than_zero()
 		{
-			_streamLocation.ShouldBeGreaterThan(1);
+			_streamLocation.ShouldEqual(_targetSize);
 		}
 	}
 }

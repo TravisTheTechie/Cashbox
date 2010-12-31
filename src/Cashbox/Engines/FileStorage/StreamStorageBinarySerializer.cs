@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2010 Travis Smith
+// Copyright (c) 2010 Travis Smith
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -19,56 +19,57 @@
 // THE SOFTWARE.
 namespace Cashbox.Engines.FileStorage
 {
+	using System;
+	using System.Collections.Generic;
 	using System.IO;
 
 
-	public class StreamStorage
+	public class StreamStorageBinarySerializer
 	{
-		readonly Stream _dataStream;
-
-		public StreamStorage(Stream dataStream)
+		public static byte[] SerializeRecordHeader(RecordHeader header)
 		{
-			_dataStream = dataStream;
+			var results = new List<byte>();
 
-			// reset stream to the start
-			_dataStream.SeekStart();
+			results.AddRange(BitConverter.GetBytes(header.HeaderVersion));
+			results.AddRange(BitConverter.GetBytes(header.RecordSize));
+			results.AddRange(BitConverter.GetBytes((int)header.Action));
 
-			if (_dataStream.Length > 0)
-				LoadHeader();
-			else
-				WriteNewHeader();
+			return results.ToArray();
 		}
 
-		public StreamHeader Header { get; set; }
-
-		void WriteNewHeader()
+		public static byte[] SerializeStreamHeader(StreamHeader header)
 		{
-			Header = new StreamHeader
+			var results = new List<byte>();
+
+			results.AddRange(BitConverter.GetBytes(header.Version));
+
+			return results.ToArray();
+		}
+
+		public static RecordHeader DeserializerRecordHeader(Stream dataStream)
+		{
+			var br = new BinaryReader(dataStream);
+
+			var result = new RecordHeader
 				{
-					Version = 1
+					HeaderVersion = br.ReadInt32(),
+					RecordSize = br.ReadInt32(),
+					Action = (StorageActions)br.ReadInt32()
 				};
 
-			_dataStream.WriteStreamHeader(Header);
+			return result;
 		}
 
-		void LoadHeader()
+		public static StreamHeader DeserializerStreamHeader(Stream dataStream)
 		{
-			var buffer = new byte[1];
-			_dataStream.Read(buffer, 0, 1);
+			var br = new BinaryReader(dataStream);
 
-			Header = new StreamHeader
+			var result = new StreamHeader
 				{
-					Version = buffer[0]
+					Version = br.ReadInt32()
 				};
-		}
 
-
-		public long Store(RecordHeader header, byte[] data)
-		{
-			_dataStream.SeekStart();
-			_dataStream.WriteRecordHeader(header);
-			_dataStream.Write(data);
-			return _dataStream.Position;
+			return result;
 		}
 	}
 }

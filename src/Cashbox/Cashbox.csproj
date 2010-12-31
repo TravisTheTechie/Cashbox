@@ -58,9 +58,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Engine.cs" />
+    <Compile Include="Engines\FileStorage\RecordHeaderExtentions.cs" />
     <Compile Include="Engines\FileStorage\StorageActions.cs" />
     <Compile Include="Engines\FileStorage\RecordHeader.cs" />
+    <Compile Include="Engines\FileStorage\StreamExtensions.cs" />
     <Compile Include="Engines\FileStorage\StreamHeader.cs" />
+    <Compile Include="Engines\FileStorage\StreamStorageBinarySerializer.cs" />
     <Compile Include="Engines\SimpleFileStorageEngine.cs" />
     <Compile Include="Engines\FileStorage\StreamStorage.cs" />
     <Compile Include="Implementations\CashboxDocumentSession.cs" />
