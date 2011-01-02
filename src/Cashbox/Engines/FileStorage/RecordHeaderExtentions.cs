@@ -44,7 +44,7 @@ namespace Cashbox.Engines.FileStorage
 			stream.Write(data);
 		}
 
-		public static StreamHeader ReadRecordHeader(this Stream stream)
+		public static StreamHeader ReadStreamHeader(this Stream stream)
 		{
 			return StreamStorageBinarySerializer.DeserializerStreamHeader(stream);
 		}
