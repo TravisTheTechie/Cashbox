@@ -21,17 +21,16 @@ namespace Cashbox.Engines.FileStorage
 {
 	using System.IO;
 
-
-	public static class RecordHeaderExtentions
+	public static class StreamHeaderExtentions
 	{
-		public static void WriteRecordHeader(this Stream stream, RecordHeader header)
+		public static void WriteStreamHeader(this Stream stream, StreamHeader header)
 		{
-			StreamStorageBinarySerializer.SerializeRecordHeader(stream, header);
+			StreamStorageBinarySerializer.SerializeStreamHeader(stream, header);
 		}
 
-		public static RecordHeader ReadRecordHeader(this Stream stream)
+		public static StreamHeader ReadStreamHeader(this Stream stream)
 		{
-			return StreamStorageBinarySerializer.DeserializeRecordHeader(stream);
+			return StreamStorageBinarySerializer.DeserializeStreamHeader(stream);
 		}
 	}
 }

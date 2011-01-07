@@ -19,48 +19,44 @@
 // THE SOFTWARE.
 namespace Cashbox.Engines.FileStorage
 {
-	using System;
-	using System.Collections.Generic;
 	using System.IO;
 
 
 	public class StreamStorageBinarySerializer
 	{
-		public static byte[] SerializeRecordHeader(RecordHeader header)
+		public static void SerializeRecordHeader(Stream dataStream, RecordHeader header)
 		{
-			var results = new List<byte>();
+			var bw = new BinaryWriter(dataStream);
 
-			results.AddRange(BitConverter.GetBytes(header.HeaderVersion));
-			results.AddRange(BitConverter.GetBytes(header.RecordSize));
-			results.AddRange(BitConverter.GetBytes((int)header.Action));
-
-			return results.ToArray();
+			bw.Write(header.HeaderVersion);
+			bw.Write(header.RecordSize);
+			bw.Write((int)header.Action);
+			bw.Write(header.Key);
 		}
 
-		public static byte[] SerializeStreamHeader(StreamHeader header)
-		{
-			var results = new List<byte>();
-
-			results.AddRange(BitConverter.GetBytes(header.Version));
-
-			return results.ToArray();
-		}
-
-		public static RecordHeader DeserializerRecordHeader(Stream dataStream)
+		public static RecordHeader DeserializeRecordHeader(Stream dataStream)
 		{
 			var br = new BinaryReader(dataStream);
 
 			var result = new RecordHeader
 				{
 					HeaderVersion = br.ReadInt32(),
-					RecordSize = br.ReadInt32(),
-					Action = (StorageActions)br.ReadInt32()
+					RecordSize = br.ReadInt64(),
+					Action = (StorageActions)br.ReadInt32(),
+					Key = br.ReadString()
 				};
 
 			return result;
 		}
 
-		public static StreamHeader DeserializerStreamHeader(Stream dataStream)
+		public static void SerializeStreamHeader(Stream dataStream, StreamHeader header)
+		{
+			var bw = new BinaryWriter(dataStream);
+
+			bw.Write(header.Version);
+		}
+
+		public static StreamHeader DeserializeStreamHeader(Stream dataStream)
 		{
 			var br = new BinaryReader(dataStream);
 

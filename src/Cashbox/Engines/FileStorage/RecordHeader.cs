@@ -23,8 +23,10 @@ namespace Cashbox.Engines.FileStorage
 	{
 		public int HeaderVersion { get; set; }
 
-		public int RecordSize { get; set; }
+		public long RecordSize { get; set; }
 
 		public StorageActions Action { get; set; }
+
+		public string Key { get; set; }
 	}
 }
