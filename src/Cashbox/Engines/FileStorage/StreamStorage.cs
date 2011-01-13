@@ -19,12 +19,14 @@
 // THE SOFTWARE.
 namespace Cashbox.Engines.FileStorage
 {
+	using System.Collections.Generic;
 	using System.IO;
 
 
 	public class StreamStorage
 	{
 		readonly Stream _dataStream;
+		readonly Dictionary<string, RecordHeader> _indexes = new Dictionary<string, RecordHeader>();
 
 		public StreamStorage(Stream dataStream)
 		{
@@ -34,7 +36,7 @@ namespace Cashbox.Engines.FileStorage
 			_dataStream.SeekStart();
 
 			if (_dataStream.Length > 0)
-				LoadHeader();
+				ReadIndex();
 			else
 				WriteNewHeader();
 		}
@@ -62,13 +64,66 @@ namespace Cashbox.Engines.FileStorage
 				};
 		}
 
-
 		public long Store(RecordHeader header, byte[] data)
 		{
-			_dataStream.SeekStart();
+			header.RecordSize = data.Length;
+
+			_dataStream.SeekEnd();
 			_dataStream.WriteRecordHeader(header);
+
+			header.RecordLocation = _dataStream.Position;
+
 			_dataStream.Write(data);
+
+			IndexRecord(header);
+
 			return _dataStream.Position;
+		}
+
+		public void ReadIndex()
+		{
+			LoadHeader();
+
+			while (_dataStream.Position < _dataStream.Length)
+			{
+				RecordHeader header = _dataStream.ReadRecordHeader();
+				if (header != null)
+				{
+					IndexRecord(header);
+				}
+			}
+		}
+
+		void IndexRecord(RecordHeader header)
+		{
+			if (header.Action == StorageActions.Store)
+			{
+				if (!_indexes.ContainsKey(header.Key))
+					_indexes.Add(header.Key, header);
+				else
+					_indexes[header.Key] = header;
+
+				_dataStream.MovePositionForward(header.RecordSize);
+			}
+			else if (header.Action == StorageActions.Delete)
+			{
+				if (_indexes.ContainsKey(header.Key))
+					_indexes.Remove(header.Key);
+			}
+		}
+
+		public int? Read(string key)
+		{
+			if (_indexes.ContainsKey(key))
+			{
+				var header = _indexes[key];
+
+				_dataStream.SeekLocation(header.RecordLocation);
+				var br = new BinaryReader(_dataStream);
+				return br.ReadInt32();
+			}
+
+			return null;
 		}
 	}
 }

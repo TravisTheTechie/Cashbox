@@ -28,5 +28,7 @@ namespace Cashbox.Engines.FileStorage
 		public StorageActions Action { get; set; }
 
 		public string Key { get; set; }
+
+		public long RecordLocation { get; set; }
 	}
 }

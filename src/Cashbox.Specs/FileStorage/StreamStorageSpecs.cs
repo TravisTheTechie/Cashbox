@@ -55,52 +55,6 @@ namespace Cashbox.Specs.FileStorage
 
 
 	[Scenario]
-	public class Data_can_be_stored :
-		StreamStorageSpecsBase
-	{
-		RecordHeader _readHeader;
-		RecordHeader _storedHeader;
-		long _streamLocation;
-		long _targetSize;
-
-		[When]
-		public void Store_is_called_with_data()
-		{
-			byte[] data = BitConverter.GetBytes(0);
-
-			_storedHeader = new RecordHeader
-				{
-					HeaderVersion = 1,
-					RecordSize = data.Length,
-					Action = StorageActions.Store
-				};
-
-			// the "size" of RecordHeader will have to managed here
-			_targetSize = data.Length + sizeof(Int32)*3;
-
-			_streamLocation = Storage.Store(_storedHeader, data);
-
-			DataStream.SeekStart();
-			_readHeader = DataStream.ReadRecordHeader();
-		}
-
-		[Then]
-		public void Stream_location_should_be_header_plus_data()
-		{
-			_streamLocation.ShouldEqual(_targetSize);
-		}
-
-		[Then]
-		public void Read_header_should_equal_stored_header()
-		{
-			_readHeader.HeaderVersion.ShouldEqual(_storedHeader.HeaderVersion);
-			_readHeader.RecordSize.ShouldEqual(_storedHeader.RecordSize);
-			_readHeader.Action.ShouldEqual(_storedHeader.Action);
-		}
-	}
-
-
-	[Scenario]
 	public class Can_build_index_from_stream :
 		StreamStorageSpecsBase
 	{
@@ -109,32 +63,53 @@ namespace Cashbox.Specs.FileStorage
 		{
 			// Store a set of ints: 1, 2, 3, 4
 
-			DataStream.WriteStreamHeader(new StreamHeader());
-
 			Storage.Store(new RecordHeader
 				{
+					Key = "One",
 					Action = StorageActions.Store
 				}, BitConverter.GetBytes(1));
 
 			Storage.Store(new RecordHeader
 				{
+					Key = "Two",
 					Action = StorageActions.Store
 				}, BitConverter.GetBytes(2));
 
 			Storage.Store(new RecordHeader
 				{
+					Key = "Three",
 					Action = StorageActions.Store
 				}, BitConverter.GetBytes(3));
 
 			Storage.Store(new RecordHeader
 				{
+					Key = "Four",
 					Action = StorageActions.Store
 				}, BitConverter.GetBytes(4));
+		}
 
-			// don't have a key stored yet...
-			//  -- besides record length we need a key length and read that data block as well when reading the index data
-			//  -- record headers should likely contain the record start location in the stream
-			//  -- still need to consider table support, are we going to support tables-per-type here?
+		[Then]
+		public void One_should_return_1()
+		{
+			Storage.Read("One").ShouldEqual(1);
+		}
+
+		[Then]
+		public void Two_should_return_2()
+		{
+			Storage.Read("Two").ShouldEqual(2);
+		}
+
+		[Then]
+		public void Three_should_return_3()
+		{
+			Storage.Read("Three").ShouldEqual(3);
+		}
+
+		[Then]
+		public void Four_should_return_4()
+		{
+			Storage.Read("Four").ShouldEqual(4);
 		}
 	}
 }

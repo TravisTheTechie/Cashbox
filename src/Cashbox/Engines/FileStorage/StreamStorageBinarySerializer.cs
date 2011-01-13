@@ -19,6 +19,7 @@
 // THE SOFTWARE.
 namespace Cashbox.Engines.FileStorage
 {
+	using System;
 	using System.IO;
 
 
@@ -36,9 +37,11 @@ namespace Cashbox.Engines.FileStorage
 
 		public static RecordHeader DeserializeRecordHeader(Stream dataStream)
 		{
-			var br = new BinaryReader(dataStream);
+			try
+			{
+				var br = new BinaryReader(dataStream);
 
-			var result = new RecordHeader
+				var result = new RecordHeader
 				{
 					HeaderVersion = br.ReadInt32(),
 					RecordSize = br.ReadInt64(),
@@ -46,7 +49,15 @@ namespace Cashbox.Engines.FileStorage
 					Key = br.ReadString()
 				};
 
-			return result;
+				result.RecordLocation = dataStream.Position;
+
+				return result;
+			}
+			catch (Exception)
+			{
+				return null;
+			}
+			
 		}
 
 		public static void SerializeStreamHeader(Stream dataStream, StreamHeader header)
