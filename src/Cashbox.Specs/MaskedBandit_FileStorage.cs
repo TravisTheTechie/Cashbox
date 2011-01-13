@@ -17,48 +17,32 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
-namespace Cashbox.Engines.FileStorage
+namespace Cashbox.Specs
 {
 	using System.IO;
+	using Engines;
+	using NUnit.Framework;
 
 
-	public static class StreamExtensions
+	[TestFixture]
+	public class MaskedBandit_FileStorage :
+		MaskedBanditBase
 	{
-		public static void SeekStart(this Stream stream)
+		[Test]
+		public void Robbin_the_sqlite_bank()
 		{
-			stream.Seek(0, SeekOrigin.Begin);
+			DocumentSessionFactory.SetEngineFactory(str => new FileStorageEngine(str));
+
+			RobTheBank(InsertStoreName);
 		}
 
-		public static void SeekEnd(this Stream stream)
+		const string InsertStoreName = "10k_insert.sqlite.store";
+
+		[TestFixtureSetUp]
+		public void CleanUpExistingFiles()
 		{
-			stream.Seek(0, SeekOrigin.End);
-		}
-
-		public static void SeekLocation(this Stream stream, long position)
-		{
-			stream.Seek(position, SeekOrigin.Begin);
-		}
-
-		public static void MovePositionForward(this Stream stream, long offset)
-		{
-			stream.Seek(offset, SeekOrigin.Current);
-		}
-
-		public static void Write(this Stream stream, byte[] data)
-		{
-			if (data == null || data.Length == 0)
-				return;
-
-			stream.Write(data, 0, data.Length);
-		}
-
-		public static byte[] Read(this Stream stream, long readLength)
-		{
-			byte[] returnData = new byte[readLength];
-
-			stream.Read(returnData, 0, (int) readLength);
-
-			return returnData;
+			if (File.Exists(InsertStoreName))
+				File.Delete(InsertStoreName);
 		}
 	}
 }

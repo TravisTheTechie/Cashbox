@@ -64,9 +64,13 @@ namespace Cashbox.Engines.FileStorage
 				};
 		}
 
-		public long Store(RecordHeader header, byte[] data)
+		public void Store(string key, byte[] data)
 		{
-			header.RecordSize = data.Length;
+			var header = new RecordHeader
+				{
+					Action = StorageActions.Store,
+					RecordSize = data.Length
+				};
 
 			_dataStream.SeekEnd();
 			_dataStream.WriteRecordHeader(header);
@@ -76,8 +80,22 @@ namespace Cashbox.Engines.FileStorage
 			_dataStream.Write(data);
 
 			IndexRecord(header);
+		}
 
-			return _dataStream.Position;
+		public void Remove(string key)
+		{
+			var header = new RecordHeader
+				{
+					Action = StorageActions.Delete,
+					RecordSize = 0
+				};
+
+			_dataStream.SeekEnd();
+			_dataStream.WriteRecordHeader(header);
+
+			header.RecordLocation = _dataStream.Position;
+
+			IndexRecord(header);
 		}
 
 		public void ReadIndex()
@@ -112,15 +130,14 @@ namespace Cashbox.Engines.FileStorage
 			}
 		}
 
-		public int? Read(string key)
+		public byte[] Read(string key)
 		{
 			if (_indexes.ContainsKey(key))
 			{
 				var header = _indexes[key];
 
 				_dataStream.SeekLocation(header.RecordLocation);
-				var br = new BinaryReader(_dataStream);
-				return br.ReadInt32();
+				return _dataStream.Read(header.RecordSize);
 			}
 
 			return null;

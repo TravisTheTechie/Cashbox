@@ -58,6 +58,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Engine.cs" />
+    <Compile Include="Engines\FileStorageEngine.cs" />
     <Compile Include="Engines\FileStorage\RecordHeaderExtentions.cs" />
     <Compile Include="Engines\FileStorage\StorageActions.cs" />
     <Compile Include="Engines\FileStorage\RecordHeader.cs" />

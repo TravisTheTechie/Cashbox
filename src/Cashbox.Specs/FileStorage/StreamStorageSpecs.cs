@@ -63,53 +63,37 @@ namespace Cashbox.Specs.FileStorage
 		{
 			// Store a set of ints: 1, 2, 3, 4
 
-			Storage.Store(new RecordHeader
-				{
-					Key = "One",
-					Action = StorageActions.Store
-				}, BitConverter.GetBytes(1));
+			Storage.Store( "One", BitConverter.GetBytes(1));
 
-			Storage.Store(new RecordHeader
-				{
-					Key = "Two",
-					Action = StorageActions.Store
-				}, BitConverter.GetBytes(2));
+			Storage.Store("Two", BitConverter.GetBytes(2));
 
-			Storage.Store(new RecordHeader
-				{
-					Key = "Three",
-					Action = StorageActions.Store
-				}, BitConverter.GetBytes(3));
+			Storage.Store("Three", BitConverter.GetBytes(3l));
 
-			Storage.Store(new RecordHeader
-				{
-					Key = "Four",
-					Action = StorageActions.Store
-				}, BitConverter.GetBytes(4));
+			Storage.Store("Four", BitConverter.GetBytes(4));
 		}
 
 		[Then]
 		public void One_should_return_1()
 		{
-			Storage.Read("One").ShouldEqual(1);
+			Storage.Read("One").ShouldEqual(BitConverter.GetBytes(1));
 		}
 
 		[Then]
 		public void Two_should_return_2()
 		{
-			Storage.Read("Two").ShouldEqual(2);
+			Storage.Read("Two").ShouldEqual(BitConverter.GetBytes(2));
 		}
 
 		[Then]
-		public void Three_should_return_3()
+		public void Three_should_return_3_as_a_long()
 		{
-			Storage.Read("Three").ShouldEqual(3);
+			Storage.Read("Three").ShouldEqual(BitConverter.GetBytes(3l));
 		}
 
 		[Then]
 		public void Four_should_return_4()
 		{
-			Storage.Read("Four").ShouldEqual(4);
+			Storage.Read("Four").ShouldEqual(BitConverter.GetBytes(4));
 		}
 	}
 }

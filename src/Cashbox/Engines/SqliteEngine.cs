@@ -47,10 +47,8 @@ namespace Cashbox.Engines
 		readonly ChannelConnection _subscription;
 
         // Private methods to handle some oddities we're seeing in Magnum
-        // ReSharper disable UnusedMember.Local
         string Serialize<T>(T obj) { return Serializer.Serialize<T>(obj); }
         object Deserialize<T>(string text) { return Serializer.Deserialize<T>(text); }
-        // ReSharper restore UnusedMember.Local
 
 		public SqliteEngine(string filename)
 		{
