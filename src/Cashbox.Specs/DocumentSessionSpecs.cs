@@ -32,7 +32,7 @@ namespace Cashbox.Specs
 		[Given]
 		public void A_cabin_session()
 		{
-			DocumentSessionFactory.SetEngineFactory(str => new SqliteEngine(str));
+			DocumentSessionFactory.SetEngineFactory(str => new FileStorageEngine(str));
 			Session = DocumentSessionFactory.Create("session.specs.store");
 		}
 
@@ -60,7 +60,6 @@ namespace Cashbox.Specs
 		[Then]
 		public void It_should_be_retrievable()
 		{
-		    
 			Session.Retrieve<TestDocument1>(Key).ShouldNotBeNull();
 		}
 

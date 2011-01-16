@@ -32,7 +32,7 @@ namespace Cashbox
 
 		static DocumentSessionFactory()
 		{
-			_engineFactory = str => new SqliteEngine(str);
+			_engineFactory = str => new FileStorageEngine(str);
 		}
 
 		public static void SetEngineFactory(EngineFactory engineFactory)

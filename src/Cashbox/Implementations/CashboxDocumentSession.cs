@@ -59,6 +59,7 @@ namespace Cashbox.Implementations
 
 			var value = MakeRequest<RetrieveValue, object>(new RetrieveValue
 				{
+					DocumentType = typeof(T),
 					Key = realKey
 				});
 
@@ -93,9 +94,8 @@ namespace Cashbox.Implementations
 		public IEnumerable<T> List<T>() where T : class
 		{
 			string keyStart = KeyConverter<T>(string.Empty);
-			List<object> values = null;
-
-			values = MakeRequest<ListValuesForType, List<object>>(new ListValuesForType
+			
+			List<object> values = MakeRequest<ListValuesForType, List<object>>(new ListValuesForType
 				{
 					Key = keyStart,
                     DocumentType = typeof(T)
@@ -113,6 +113,7 @@ namespace Cashbox.Implementations
 
 			Send(new RemoveValue
 				{
+					DocumentType = typeof(T),
 					Key = realKey
 				});
 		}
@@ -134,7 +135,7 @@ namespace Cashbox.Implementations
 
 		static string KeyConverter<T>(string key)
 		{
-			return "{0}___{1}".FormatWith(typeof(T).FullName, key);
+			return key;
 		}
 	}
 }

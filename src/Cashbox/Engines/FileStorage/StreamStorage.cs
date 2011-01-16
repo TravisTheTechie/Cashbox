@@ -19,14 +19,20 @@
 // THE SOFTWARE.
 namespace Cashbox.Engines.FileStorage
 {
+	using System;
 	using System.Collections.Generic;
 	using System.IO;
+	using System.Linq;
+	using Magnum.Collections;
 
 
-	public class StreamStorage
+	public class StreamStorage :
+		IDisposable
 	{
 		readonly Stream _dataStream;
-		readonly Dictionary<string, RecordHeader> _indexes = new Dictionary<string, RecordHeader>();
+
+		readonly Dictionary<Tuple<string, string>, RecordHeader> _indexes =
+			new Dictionary<Tuple<string, string>, RecordHeader>();
 
 		public StreamStorage(Stream dataStream)
 		{
@@ -43,6 +49,16 @@ namespace Cashbox.Engines.FileStorage
 
 		public StreamHeader Header { get; set; }
 
+		public Tuple<string, string>[] Keys
+		{
+			get { return _indexes.Keys.ToArray(); }
+		}
+
+		public void Dispose()
+		{
+			_dataStream.Close();
+		}
+
 		void WriteNewHeader()
 		{
 			Header = new StreamHeader
@@ -55,19 +71,15 @@ namespace Cashbox.Engines.FileStorage
 
 		void LoadHeader()
 		{
-			var buffer = new byte[1];
-			_dataStream.Read(buffer, 0, 1);
-
-			Header = new StreamHeader
-				{
-					Version = buffer[0]
-				};
+			Header = _dataStream.ReadStreamHeader();
 		}
 
-		public void Store(string key, byte[] data)
+		public void Store(string table, string key, byte[] data)
 		{
 			var header = new RecordHeader
 				{
+					Key = key,
+					Table = table,
 					Action = StorageActions.Store,
 					RecordSize = data.Length
 				};
@@ -82,12 +94,14 @@ namespace Cashbox.Engines.FileStorage
 			IndexRecord(header);
 		}
 
-		public void Remove(string key)
+		public void Remove(string table, string key)
 		{
 			var header = new RecordHeader
 				{
 					Action = StorageActions.Delete,
-					RecordSize = 0
+					RecordSize = 0,
+					Table = table,
+					Key = key
 				};
 
 			_dataStream.SeekEnd();
@@ -106,35 +120,37 @@ namespace Cashbox.Engines.FileStorage
 			{
 				RecordHeader header = _dataStream.ReadRecordHeader();
 				if (header != null)
-				{
 					IndexRecord(header);
-				}
 			}
 		}
 
 		void IndexRecord(RecordHeader header)
 		{
+			var key = new Tuple<string, string>(header.Table, header.Key);
+
 			if (header.Action == StorageActions.Store)
 			{
-				if (!_indexes.ContainsKey(header.Key))
-					_indexes.Add(header.Key, header);
+				if (!_indexes.ContainsKey(key))
+					_indexes.Add(key, header);
 				else
-					_indexes[header.Key] = header;
+					_indexes[key] = header;
 
 				_dataStream.MovePositionForward(header.RecordSize);
 			}
 			else if (header.Action == StorageActions.Delete)
 			{
-				if (_indexes.ContainsKey(header.Key))
-					_indexes.Remove(header.Key);
+				if (_indexes.ContainsKey(key))
+					_indexes.Remove(key);
 			}
 		}
 
-		public byte[] Read(string key)
+		public byte[] Read(string table, string itemKey)
 		{
+			var key = new Tuple<string, string>(table, itemKey);
+
 			if (_indexes.ContainsKey(key))
 			{
-				var header = _indexes[key];
+				RecordHeader header = _indexes[key];
 
 				_dataStream.SeekLocation(header.RecordLocation);
 				return _dataStream.Read(header.RecordSize);

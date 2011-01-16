@@ -19,6 +19,9 @@
 // THE SOFTWARE.
 namespace Cashbox.Engines.FileStorage
 {
+	using System;
+
+
 	public class RecordHeader
 	{
 		public int HeaderVersion { get; set; }
@@ -30,5 +33,7 @@ namespace Cashbox.Engines.FileStorage
 		public string Key { get; set; }
 
 		public long RecordLocation { get; set; }
+
+		public string Table { get; set; }
 	}
 }

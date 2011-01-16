@@ -17,9 +17,6 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
-using Magnum.Reflection;
-using Magnum.Serialization;
-
 namespace Cashbox.Engines
 {
 	using System;
@@ -27,28 +24,25 @@ namespace Cashbox.Engines
 	using System.Data;
 	using Community.CsharpSqlite.SQLiteClient;
 	using log4net;
+	using Magnum.Reflection;
+	using Magnum.Serialization;
 	using Messages;
 	using Stact;
 	using Stact.Internal;
-    using Magnum.Extensions;
-    using Magnum.Serialization;
 
 
 	public class SqliteEngine :
 		Engine
 	{
+		protected static readonly FastTextSerializer Serializer = new FastTextSerializer();
 		static readonly ILog _logger = LogManager.GetLogger("Cashbox.Engines.SqliteEngine");
-
-        protected static readonly FastTextSerializer Serializer = new FastTextSerializer();
 
 		readonly SqliteConnection _connection;
 		readonly Fiber _fiber = new ThreadFiber();
 		readonly ChannelAdapter _input = new ChannelAdapter();
 		readonly ChannelConnection _subscription;
 
-        // Private methods to handle some oddities we're seeing in Magnum
-        string Serialize<T>(T obj) { return Serializer.Serialize<T>(obj); }
-        object Deserialize<T>(string text) { return Serializer.Deserialize<T>(text); }
+		// Private methods to handle some oddities we're seeing in Magnum
 
 		public SqliteEngine(string filename)
 		{
@@ -56,27 +50,26 @@ namespace Cashbox.Engines
 
 			_subscription = _input.Connect(config =>
 				{
-                    config.AddConsumerOf<Request<Startup>>()
-                        .UsingConsumer(Startup)
-                        .HandleOnFiber(_fiber);
+					config.AddConsumerOf<Request<Startup>>()
+						.UsingConsumer(Startup)
+						.HandleOnFiber(_fiber);
 
 					config.AddConsumerOf<RemoveValue>()
 						.UsingConsumer(RemoveKeyFromSession)
-                        .HandleOnFiber(_fiber);
+						.HandleOnFiber(_fiber);
 
 					config.AddConsumerOf<Request<RetrieveValue>>()
 						.UsingConsumer(RetrieveValue)
-                        .HandleOnFiber(_fiber);
+						.HandleOnFiber(_fiber);
 
 					config.AddConsumerOf<Request<ListValuesForType>>()
 						.UsingConsumer(RetrieveListFromType)
-                        .HandleOnFiber(_fiber);
+						.HandleOnFiber(_fiber);
 
 					config.AddConsumerOf<StoreValue>()
 						.UsingConsumer(StoreValue)
-                        .HandleOnFiber(_fiber);
+						.HandleOnFiber(_fiber);
 				});
-
 		}
 
 		public void Dispose()
@@ -109,7 +102,7 @@ namespace Cashbox.Engines
 				if (!response.WaitUntilCompleted(TimeSpan.FromSeconds(180)) && ex != null)
 					throw ex;
 
-				return (TResponse) response.Value;
+				return (TResponse)response.Value;
 			}
 		}
 
@@ -118,9 +111,20 @@ namespace Cashbox.Engines
 			_input.Send(message);
 		}
 
+		string Serialize<T>(T obj)
+		{
+			return Serializer.Serialize(obj);
+		}
+
+		object Deserialize<T>(string text)
+		{
+			return Serializer.Deserialize<T>(text);
+		}
+
 		void StoreValue(StoreValue message)
 		{
-            var serializedValue = this.FastInvoke<SqliteEngine, string>(new[] { message.DocumentType }, "Serialize", message.Value);
+			string serializedValue = this.FastInvoke<SqliteEngine, string>(new[] {message.DocumentType}, "Serialize",
+			                                                               message.Value);
 
 			using (SqliteCommand cmd = _connection.CreateCommand())
 			{
@@ -144,11 +148,11 @@ namespace Cashbox.Engines
 					cmd.Parameters.Add("@key", message.Body.Key);
 					using (SqliteDataReader dr = cmd.ExecuteReader())
 					{
-                        while (dr.Read())
-                        {
-                            items.Add(this.FastInvoke<SqliteEngine, object>(new[] {message.Body.DocumentType},"Deserialize", dr["value"].ToString()));
-                        }
-
+						while (dr.Read())
+						{
+							items.Add(this.FastInvoke<SqliteEngine, object>(new[] {message.Body.DocumentType}, "Deserialize",
+							                                                dr["value"].ToString()));
+						}
 					}
 				}
 				Respond(message, items);
@@ -171,13 +175,13 @@ namespace Cashbox.Engines
 					using (SqliteDataReader dr = cmd.ExecuteReader())
 					{
 						object value = null;
-                        if (dr.Read())
-                        {
-                            var serializedValue = dr.GetString(0);
+						if (dr.Read())
+						{
+							string serializedValue = dr.GetString(0);
 
-                            value = this.FastInvoke<SqliteEngine, object>(new[] { message.Body.DocumentType }, "Deserialize", serializedValue);
-                        }
-					    Respond(message, value);
+							value = this.FastInvoke<SqliteEngine, object>(new[] {message.Body.DocumentType}, "Deserialize", serializedValue);
+						}
+						Respond(message, value);
 					}
 				}
 			}
@@ -234,7 +238,7 @@ namespace Cashbox.Engines
 		{
 			message.ResponseChannel.Send(new ReturnValue
 				{
-                    DocumentType = typeof(T),
+					DocumentType = typeof(T),
 					Value = response
 				});
 		}

@@ -20,7 +20,12 @@
 namespace Cashbox.Engines
 {
 	using System;
+	using System.IO;
+	using System.Linq;
+	using System.Text;
+	using FileStorage;
 	using log4net;
+	using Magnum.Reflection;
 	using Magnum.Serialization;
 	using Messages;
 	using Stact;
@@ -38,12 +43,16 @@ namespace Cashbox.Engines
 
 		protected static readonly FastTextSerializer Serializer = new FastTextSerializer();
 
+		readonly StreamStorage _storage;
+
 		// Private methods to handle some oddities we're seeing in Magnum
 		string Serialize<T>(T obj) { return Serializer.Serialize<T>(obj); }
 		object Deserialize<T>(string text) { return Serializer.Deserialize<T>(text); }
 
-		public FileStorageEngine(string foldername)
+		public FileStorageEngine(string filename)
 		{
+			_storage = new StreamStorage(new FileStream(filename, FileMode.OpenOrCreate));
+
 			_subscription = _input.Connect(config =>
 			{
 				config.AddConsumerOf<Request<Startup>>()
@@ -70,35 +79,68 @@ namespace Cashbox.Engines
 
 		void StoreValue(StoreValue message)
 		{
-			throw new NotImplementedException();
+			var json = this.FastInvoke<FileStorageEngine, string>(new[] { message.DocumentType }, "Serialize", message.Value);
+
+			_storage.Store(message.DocumentType.ToString(), message.Key, Encoding.UTF8.GetBytes(json));
 		}
 
 		void RetrieveListFromType(Request<ListValuesForType> message)
 		{
-			throw new NotImplementedException();
+			try
+			{
+				var values = _storage
+					.Keys
+					.Where(x => x.First == message.Body.DocumentType.ToString())
+					.ToList()
+					.ConvertAll(x => GetValue(message.Body.DocumentType, x.Second));
+				
+				Respond(message, values);
+			}
+			catch (Exception ex)
+			{
+				RespondWithException(message, ex);
+			}
+
 		}
 
 		void RetrieveValue(Request<RetrieveValue> message)
 		{
-			throw new NotImplementedException();
+			try
+			{
+				object value = GetValue(message.Body.DocumentType, message.Body.Key);
+
+				Respond(message, value);
+			}
+			catch (Exception ex)
+			{
+				RespondWithException(message, ex);
+			}
+		}
+
+		object GetValue(Type table, string key)
+		{
+			var bytes = _storage.Read(table.ToString(), key);
+			if (bytes == null)
+				return null;
+			var json = Encoding.UTF8.GetString(bytes);
+			return this.FastInvoke<FileStorageEngine, object>(new[] { table }, "Deserialize", json);
 		}
 
 		void RemoveKeyFromSession(RemoveValue message)
 		{
-			throw new NotImplementedException();
+			_storage.Remove(message.DocumentType.ToString(), message.Key);
 		}
 
 		void Startup(Request<Startup> message)
 		{
-			throw new NotImplementedException();
+			Respond(message, string.Empty);
 		}
 
 		public void Dispose()
 		{
 			_fiber.Shutdown(TimeSpan.FromSeconds(120));
 			_subscription.Disconnect();
-			
-			_subscription.Disconnect();
+			_storage.Dispose();
 		}
 
 		public TResponse MakeRequest<TRequest, TResponse>(TRequest message) where TRequest : CashboxMessage
@@ -121,6 +163,9 @@ namespace Cashbox.Engines
 				if (!response.WaitUntilCompleted(TimeSpan.FromSeconds(180)) && ex != null)
 					throw ex;
 
+				if (response.Value == null)
+					return default(TResponse);
+				
 				return (TResponse)response.Value;
 			}
 		}
@@ -128,6 +173,23 @@ namespace Cashbox.Engines
 		public void Send<T>(T message) where T : CashboxMessage
 		{
 			_input.Send(message);
+		}
+
+		static void Respond<T, TK>(Request<TK> message, T response)
+		{
+			message.ResponseChannel.Send(new ReturnValue
+			{
+				DocumentType = typeof(T),
+				Value = response
+			});
+		}
+
+		static void RespondWithException<T>(Request<T> message, Exception ex)
+		{
+			message.ResponseChannel.Send(new ReturnException
+			{
+				Exception = new SqliteEngineException(string.Format("Error with {0}", typeof(T).Name), ex)
+			});
 		}
 	}
 }

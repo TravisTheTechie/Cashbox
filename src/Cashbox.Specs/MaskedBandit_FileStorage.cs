@@ -29,14 +29,14 @@ namespace Cashbox.Specs
 		MaskedBanditBase
 	{
 		[Test]
-		public void Robbin_the_sqlite_bank()
+		public void Robbin_the_filestore_bank()
 		{
 			DocumentSessionFactory.SetEngineFactory(str => new FileStorageEngine(str));
 
 			RobTheBank(InsertStoreName);
 		}
 
-		const string InsertStoreName = "10k_insert.sqlite.store";
+		const string InsertStoreName = "10k_insert.filestore.store";
 
 		[TestFixtureSetUp]
 		public void CleanUpExistingFiles()

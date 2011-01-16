@@ -27,6 +27,7 @@ namespace Cashbox.Specs.FileStorage
 
 	public class StreamStorageSpecsBase
 	{
+		protected string Table { get; set; }
 		protected StreamStorage Storage { get; set; }
 
 		protected MemoryStream DataStream { get; set; }
@@ -38,6 +39,8 @@ namespace Cashbox.Specs.FileStorage
 				DataStream = new MemoryStream();
 
 			Storage = new StreamStorage(DataStream);
+
+			Table = "Test";
 		}
 	}
 
@@ -63,37 +66,37 @@ namespace Cashbox.Specs.FileStorage
 		{
 			// Store a set of ints: 1, 2, 3, 4
 
-			Storage.Store( "One", BitConverter.GetBytes(1));
+			Storage.Store(Table, "One", BitConverter.GetBytes(1));
 
-			Storage.Store("Two", BitConverter.GetBytes(2));
+			Storage.Store(Table, "Two", BitConverter.GetBytes(2));
 
-			Storage.Store("Three", BitConverter.GetBytes(3l));
+			Storage.Store(Table, "Three", BitConverter.GetBytes(3l));
 
-			Storage.Store("Four", BitConverter.GetBytes(4));
+			Storage.Store(Table, "Four", BitConverter.GetBytes(4));
 		}
 
 		[Then]
 		public void One_should_return_1()
 		{
-			Storage.Read("One").ShouldEqual(BitConverter.GetBytes(1));
+			Storage.Read(Table, "One").ShouldEqual(BitConverter.GetBytes(1));
 		}
 
 		[Then]
 		public void Two_should_return_2()
 		{
-			Storage.Read("Two").ShouldEqual(BitConverter.GetBytes(2));
+			Storage.Read(Table, "Two").ShouldEqual(BitConverter.GetBytes(2));
 		}
 
 		[Then]
 		public void Three_should_return_3_as_a_long()
 		{
-			Storage.Read("Three").ShouldEqual(BitConverter.GetBytes(3l));
+			Storage.Read(Table, "Three").ShouldEqual(BitConverter.GetBytes(3l));
 		}
 
 		[Then]
 		public void Four_should_return_4()
 		{
-			Storage.Read("Four").ShouldEqual(BitConverter.GetBytes(4));
+			Storage.Read(Table, "Four").ShouldEqual(BitConverter.GetBytes(4));
 		}
 	}
 }

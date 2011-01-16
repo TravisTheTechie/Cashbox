@@ -32,6 +32,7 @@ namespace Cashbox.Engines.FileStorage
 			bw.Write(header.HeaderVersion);
 			bw.Write(header.RecordSize);
 			bw.Write((int)header.Action);
+			bw.Write(header.Table);
 			bw.Write(header.Key);
 		}
 
@@ -46,6 +47,7 @@ namespace Cashbox.Engines.FileStorage
 					HeaderVersion = br.ReadInt32(),
 					RecordSize = br.ReadInt64(),
 					Action = (StorageActions)br.ReadInt32(),
+					Table = br.ReadString(),
 					Key = br.ReadString()
 				};
 
@@ -57,7 +59,6 @@ namespace Cashbox.Engines.FileStorage
 			{
 				return null;
 			}
-			
 		}
 
 		public static void SerializeStreamHeader(Stream dataStream, StreamHeader header)
