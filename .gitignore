@@ -1,6 +1,7 @@
 bin
 obj
 test-results
+output
 
 .DS_Store
 TestResult.xml
@@ -11,5 +12,6 @@ TestResult.xml
 *.suo
 *.pidb
 *.swp
+*.nupkg
 
 _ReSharper.*
