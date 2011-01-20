@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<package>
+  <metadata>
+    <id>Cashbox</id>
+    <title>Cashbox</title>
+    <version>0.9</version>
+    <authors>Travis Smith</authors>
+    <owners>Travis Smith</owners>
+    <licenseUrl>https://github.com/Cashbox/Cashbox/blob/master/LICENSE</licenseUrl>
+    <projectUrl>https://github.com/Cashbox/Cashbox</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>An in process NoSQL database / document store for when you need a full managed solution.</description>
+    <summary></summary>
+    <language>en-US</language>
+  </metadata>
+</package>

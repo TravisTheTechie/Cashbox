@@ -1,0 +1,1 @@
+lib\nuget\nuget pack cashbox.nuspec -b output -o .
