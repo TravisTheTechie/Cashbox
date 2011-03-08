@@ -31,14 +31,6 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Community.CsharpSqlite, Version=3.6.23.0, Culture=neutral, processorArchitecture=x86">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\lib\SQLite\Community.CsharpSqlite.dll</HintPath>
-    </Reference>
-    <Reference Include="Community.CsharpSqlite.SQLiteClient, Version=3.6.23.0, Culture=neutral, processorArchitecture=x86">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\lib\SQLite\Community.CsharpSqlite.SQLiteClient.dll</HintPath>
-    </Reference>
     <Reference Include="log4net">
       <HintPath>..\..\lib\log4net\log4net.dll</HintPath>
     </Reference>
@@ -66,13 +58,9 @@
     <Compile Include="Engines\FileStorage\StreamHeader.cs" />
     <Compile Include="Engines\FileStorage\StreamHeaderExtentions.cs" />
     <Compile Include="Engines\FileStorage\StreamStorageBinarySerializer.cs" />
-    <Compile Include="Engines\SimpleFileStorageEngine.cs" />
     <Compile Include="Engines\FileStorage\StreamStorage.cs" />
     <Compile Include="Implementations\CashboxDocumentSession.cs" />
-    <Compile Include="Engines\InMemoryEngine.cs" />
     <Compile Include="DocumentSessionFactory.cs" />
-    <Compile Include="Engines\SqliteEngine.cs" />
-    <Compile Include="Engines\SqliteEngineException.cs" />
     <Compile Include="Messages\CashboxMessage.cs" />
     <Compile Include="Messages\RetrieveValue.cs" />
     <Compile Include="Messages\InMemoryEngineDataChange.cs" />

@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2010 Travis Smith
+﻿// Copyright (c) 2010-2011 Travis Smith
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,6 +20,7 @@
 namespace Cashbox.Engines
 {
 	using System;
+	using System.Collections.Generic;
 	using System.IO;
 	using System.Linq;
 	using System.Text;
@@ -46,40 +47,47 @@ namespace Cashbox.Engines
 		readonly StreamStorage _storage;
 
 		// Private methods to handle some oddities we're seeing in Magnum
-		string Serialize<T>(T obj) { return Serializer.Serialize<T>(obj); }
-		object Deserialize<T>(string text) { return Serializer.Deserialize<T>(text); }
+		string Serialize<T>(T obj)
+		{
+			return Serializer.Serialize<T>(obj);
+		}
+
+		object Deserialize<T>(string text)
+		{
+			return Serializer.Deserialize<T>(text);
+		}
 
 		public FileStorageEngine(string filename)
 		{
 			_storage = new StreamStorage(new FileStream(filename, FileMode.OpenOrCreate));
 
 			_subscription = _input.Connect(config =>
-			{
-				config.AddConsumerOf<Request<Startup>>()
-					.UsingConsumer(Startup)
-					.HandleOnFiber(_fiber);
+				{
+					config.AddConsumerOf<Request<Startup>>()
+						.UsingConsumer(Startup)
+						.HandleOnFiber(_fiber);
 
-				config.AddConsumerOf<RemoveValue>()
-					.UsingConsumer(RemoveKeyFromSession)
-					.HandleOnFiber(_fiber);
+					config.AddConsumerOf<RemoveValue>()
+						.UsingConsumer(RemoveKeyFromSession)
+						.HandleOnFiber(_fiber);
 
-				config.AddConsumerOf<Request<RetrieveValue>>()
-					.UsingConsumer(RetrieveValue)
-					.HandleOnFiber(_fiber);
+					config.AddConsumerOf<Request<RetrieveValue>>()
+						.UsingConsumer(RetrieveValue)
+						.HandleOnFiber(_fiber);
 
-				config.AddConsumerOf<Request<ListValuesForType>>()
-					.UsingConsumer(RetrieveListFromType)
-					.HandleOnFiber(_fiber);
+					config.AddConsumerOf<Request<ListValuesForType>>()
+						.UsingConsumer(RetrieveListFromType)
+						.HandleOnFiber(_fiber);
 
-				config.AddConsumerOf<StoreValue>()
-					.UsingConsumer(StoreValue)
-					.HandleOnFiber(_fiber);
-			});
+					config.AddConsumerOf<StoreValue>()
+						.UsingConsumer(StoreValue)
+						.HandleOnFiber(_fiber);
+				});
 		}
 
 		void StoreValue(StoreValue message)
 		{
-			var json = this.FastInvoke<FileStorageEngine, string>(new[] { message.DocumentType }, "Serialize", message.Value);
+			string json = this.FastInvoke<FileStorageEngine, string>(new[] {message.DocumentType}, "Serialize", message.Value);
 
 			_storage.Store(message.DocumentType.ToString(), message.Key, Encoding.UTF8.GetBytes(json));
 		}
@@ -88,19 +96,18 @@ namespace Cashbox.Engines
 		{
 			try
 			{
-				var values = _storage
+				List<object> values = _storage
 					.Keys
 					.Where(x => x.First == message.Body.DocumentType.ToString())
 					.ToList()
 					.ConvertAll(x => GetValue(message.Body.DocumentType, x.Second));
-				
+
 				Respond(message, values);
 			}
 			catch (Exception ex)
 			{
 				RespondWithException(message, ex);
 			}
-
 		}
 
 		void RetrieveValue(Request<RetrieveValue> message)
@@ -119,11 +126,11 @@ namespace Cashbox.Engines
 
 		object GetValue(Type table, string key)
 		{
-			var bytes = _storage.Read(table.ToString(), key);
+			byte[] bytes = _storage.Read(table.ToString(), key);
 			if (bytes == null)
 				return null;
-			var json = Encoding.UTF8.GetString(bytes);
-			return this.FastInvoke<FileStorageEngine, object>(new[] { table }, "Deserialize", json);
+			string json = Encoding.UTF8.GetString(bytes);
+			return this.FastInvoke<FileStorageEngine, object>(new[] {table}, "Deserialize", json);
 		}
 
 		void RemoveKeyFromSession(RemoveValue message)
@@ -150,13 +157,13 @@ namespace Cashbox.Engines
 			Exception ex = null;
 
 			using (channel.Connect(config =>
-			{
-				config.AddConsumerOf<ReturnValue>()
-					.UsingConsumer(msg => response.Complete(msg.Value));
+				{
+					config.AddConsumerOf<ReturnValue>()
+						.UsingConsumer(msg => response.Complete(msg.Value));
 
-				config.AddConsumerOf<ReturnException>()
-					.UsingConsumer(msg => ex = msg.Exception);
-			}))
+					config.AddConsumerOf<ReturnException>()
+						.UsingConsumer(msg => ex = msg.Exception);
+				}))
 			{
 				_input.Request(message, channel);
 
@@ -165,7 +172,7 @@ namespace Cashbox.Engines
 
 				if (response.Value == null)
 					return default(TResponse);
-				
+
 				return (TResponse)response.Value;
 			}
 		}
@@ -178,18 +185,18 @@ namespace Cashbox.Engines
 		static void Respond<T, TK>(Request<TK> message, T response)
 		{
 			message.ResponseChannel.Send(new ReturnValue
-			{
-				DocumentType = typeof(T),
-				Value = response
-			});
+				{
+					DocumentType = typeof(T),
+					Value = response
+				});
 		}
 
 		static void RespondWithException<T>(Request<T> message, Exception ex)
 		{
 			message.ResponseChannel.Send(new ReturnException
-			{
-				Exception = new SqliteEngineException(string.Format("Error with {0}", typeof(T).Name), ex)
-			});
+				{
+					Exception = new Exception(string.Format("Error with {0}", typeof(T).Name), ex)
+				});
 		}
 	}
 }

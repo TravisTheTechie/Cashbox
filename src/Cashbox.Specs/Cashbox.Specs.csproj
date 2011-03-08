@@ -65,13 +65,11 @@
     <Compile Include="ContextSetup.cs" />
     <Compile Include="MaskedBandit_FileStorage.cs" />
     <Compile Include="MaskedBanditBase.cs" />
-    <Compile Include="MaskedBandit_InMemory.cs" />
     <Compile Include="DocumentSessionSpecs.cs" />
     <Compile Include="NumericDocument.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="FileStorage\StreamStorageSpecs.cs" />
     <Compile Include="TestDocument1.cs" />
-    <Compile Include="MaskedBandit_Sqlite.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="log4net.config.xml">

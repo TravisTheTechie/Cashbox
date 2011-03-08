@@ -34,6 +34,7 @@ namespace Cashbox.Engines.FileStorage
 		readonly Dictionary<Tuple<string, string>, RecordHeader> _indexes =
 			new Dictionary<Tuple<string, string>, RecordHeader>();
 
+
 		public StreamStorage(Stream dataStream)
 		{
 			_dataStream = dataStream;

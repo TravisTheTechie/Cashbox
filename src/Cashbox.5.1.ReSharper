@@ -1,6 +1,6 @@
 <Configuration>
   <CodeStyleSettings>
-    <ExternalPath>Cashbox.Resharper.xml</ExternalPath>
+    <ExternalPath>C:\src\Cashbox\src\Cashbox.Resharper.xml</ExternalPath>
     <Sharing>EXTERNAL</Sharing>
   </CodeStyleSettings>
 </Configuration>
