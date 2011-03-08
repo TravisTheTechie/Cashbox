@@ -271,7 +271,7 @@ II.2.12 <HandlesEvent />
   <XML>
     <FormatSettings />
   </XML>
-  <FileHeader><![CDATA[Copyright (c) 2010 Travis Smith
+  <FileHeader><![CDATA[Copyright (c) 2010-2011 Travis Smith
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
