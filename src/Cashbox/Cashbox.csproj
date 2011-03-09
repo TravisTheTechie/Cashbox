@@ -62,6 +62,7 @@
     <Compile Include="Implementations\CashboxDocumentSession.cs" />
     <Compile Include="DocumentSessionFactory.cs" />
     <Compile Include="Messages\CashboxMessage.cs" />
+    <Compile Include="Messages\CompactionAction.cs" />
     <Compile Include="Messages\RetrieveValue.cs" />
     <Compile Include="Messages\InMemoryEngineDataChange.cs" />
     <Compile Include="Messages\KeyedCashboxMessage.cs" />

@@ -38,7 +38,10 @@ namespace Cashbox.Specs.FileStorage
 			if (DataStream == null)
 				DataStream = new MemoryStream();
 
-			Storage = new StreamStorage(DataStream);
+			Func<Stream> primaryStreamFactory = () => new MemoryStream();
+			Func<Stream> tempStreamFactory = () => new MemoryStream();
+
+			Storage = new StreamStorage(primaryStreamFactory, tempStreamFactory, null, null);
 
 			Table = "Test";
 		}
@@ -70,7 +73,7 @@ namespace Cashbox.Specs.FileStorage
 
 			Storage.Store(Table, "Two", BitConverter.GetBytes(2));
 
-			Storage.Store(Table, "Three", BitConverter.GetBytes(3l));
+			Storage.Store(Table, "Three", BitConverter.GetBytes(3L));
 
 			Storage.Store(Table, "Four", BitConverter.GetBytes(4));
 		}
@@ -90,7 +93,7 @@ namespace Cashbox.Specs.FileStorage
 		[Then]
 		public void Three_should_return_3_as_a_long()
 		{
-			Storage.Read(Table, "Three").ShouldEqual(BitConverter.GetBytes(3l));
+			Storage.Read(Table, "Three").ShouldEqual(BitConverter.GetBytes(3L));
 		}
 
 		[Then]

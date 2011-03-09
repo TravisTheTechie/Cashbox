@@ -63,6 +63,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ContextSetup.cs" />
+    <Compile Include="FileStorage\StorageCleanUpSpecs.cs" />
     <Compile Include="MaskedBandit_FileStorage.cs" />
     <Compile Include="MaskedBanditBase.cs" />
     <Compile Include="DocumentSessionSpecs.cs" />

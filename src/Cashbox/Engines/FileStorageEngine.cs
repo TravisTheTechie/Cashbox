@@ -41,10 +41,12 @@ namespace Cashbox.Engines
 		readonly Fiber _fiber = new ThreadFiber();
 		readonly ChannelAdapter _input = new ChannelAdapter();
 		readonly ChannelConnection _subscription;
+		int _changeCounter = 0;
+		readonly StreamStorage _storage;
 
 		protected static readonly FastTextSerializer Serializer = new FastTextSerializer();
 
-		readonly StreamStorage _storage;
+		public int CompactionFrequency { get; set; }
 
 		// Private methods to handle some oddities we're seeing in Magnum
 		string Serialize<T>(T obj)
@@ -59,7 +61,13 @@ namespace Cashbox.Engines
 
 		public FileStorageEngine(string filename)
 		{
-			_storage = new StreamStorage(new FileStream(filename, FileMode.OpenOrCreate));
+			CompactionFrequency = 100;
+
+			_storage = new StreamStorage(
+				() => new FileStream(filename, FileMode.OpenOrCreate),
+				() => new FileStream(filename + ".tmp", FileMode.OpenOrCreate),
+				s => { s.Close(); File.Delete(filename); },
+				s => { s.Close(); File.Delete(filename + ".tmp"); });
 
 			_subscription = _input.Connect(config =>
 				{
@@ -82,12 +90,23 @@ namespace Cashbox.Engines
 					config.AddConsumerOf<StoreValue>()
 						.UsingConsumer(StoreValue)
 						.HandleOnFiber(_fiber);
+
+					config.AddConsumerOf<CompactionAction>()
+						.UsingConsumer(CompactDatabase)
+						.HandleOnFiber(_fiber);
 				});
+		}
+
+		void CompactDatabase(CompactionAction message)
+		{
+			_changeCounter = 0;
+			_storage.CleanUp();
 		}
 
 		void StoreValue(StoreValue message)
 		{
-			string json = this.FastInvoke<FileStorageEngine, string>(new[] {message.DocumentType}, "Serialize", message.Value);
+			IncrementChangeCounter();
+			string json = this.FastInvoke<FileStorageEngine, string>(new[] { message.DocumentType }, "Serialize", message.Value);
 
 			_storage.Store(message.DocumentType.ToString(), message.Key, Encoding.UTF8.GetBytes(json));
 		}
@@ -130,12 +149,22 @@ namespace Cashbox.Engines
 			if (bytes == null)
 				return null;
 			string json = Encoding.UTF8.GetString(bytes);
-			return this.FastInvoke<FileStorageEngine, object>(new[] {table}, "Deserialize", json);
+			return this.FastInvoke<FileStorageEngine, object>(new[] { table }, "Deserialize", json);
 		}
 
 		void RemoveKeyFromSession(RemoveValue message)
 		{
+			IncrementChangeCounter();
 			_storage.Remove(message.DocumentType.ToString(), message.Key);
+		}
+
+		void IncrementChangeCounter()
+		{
+			_changeCounter++;
+			if (_changeCounter == CompactionFrequency)
+			{
+				_input.Send(new CompactionAction());
+			}
 		}
 
 		void Startup(Request<Startup> message)
