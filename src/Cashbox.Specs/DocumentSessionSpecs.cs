@@ -68,12 +68,6 @@ namespace Cashbox.Specs
 		{
 			Session.List<TestDocument1>().Count().ShouldEqual(1);
 		}
-
-		[After]
-		public void Clear_out_list_values()
-		{
-			//Session.Delete<TestDocument1>(Key);
-		}
 	}
 
 

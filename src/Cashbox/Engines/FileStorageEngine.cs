@@ -36,7 +36,7 @@ namespace Cashbox.Engines
 	public class FileStorageEngine :
 		Engine
 	{
-		static readonly ILog _logger = LogManager.GetLogger("Cashbox.Engines.SqliteEngine");
+		static readonly ILog _logger = LogManager.GetLogger("Cashbox.Engines.FileStorageEngine");
 
 		readonly Fiber _fiber = new ThreadFiber();
 		readonly ChannelAdapter _input = new ChannelAdapter();
@@ -117,9 +117,9 @@ namespace Cashbox.Engines
 			{
 				List<object> values = _storage
 					.Keys
-					.Where(x => x.First == message.Body.DocumentType.ToString())
+					.Where(x => x.Table == message.Body.DocumentType.ToString())
 					.ToList()
-					.ConvertAll(x => GetValue(message.Body.DocumentType, x.Second));
+					.ConvertAll(x => GetValue(message.Body.DocumentType, x.Key));
 
 				Respond(message, values);
 			}

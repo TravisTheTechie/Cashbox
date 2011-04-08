@@ -52,6 +52,8 @@
     <Compile Include="Engine.cs" />
     <Compile Include="Engines\FileStorageEngine.cs" />
     <Compile Include="Engines\FileStorage\RecordHeaderExtentions.cs" />
+    <Compile Include="Engines\FileStorage\RecordKey.cs" />
+    <Compile Include="Engines\FileStorage\RecordKeyComparer.cs" />
     <Compile Include="Engines\FileStorage\StorageActions.cs" />
     <Compile Include="Engines\FileStorage\RecordHeader.cs" />
     <Compile Include="Engines\FileStorage\StreamExtensions.cs" />

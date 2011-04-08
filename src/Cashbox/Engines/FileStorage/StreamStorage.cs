@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2010 Travis Smith
+﻿// Copyright (c) 2010-2011 Travis Smith
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -19,194 +19,196 @@
 // THE SOFTWARE.
 namespace Cashbox.Engines.FileStorage
 {
-	using System;
-	using System.Collections.Generic;
-	using System.IO;
-	using System.Linq;
-	using Magnum.Collections;
+    using System;
+    using System.Collections.Generic;
+    using System.IO;
+    using System.Linq;
 
 
-	public class StreamStorage :
-		IDisposable
-	{
-		Stream _dataStream;
+    public class StreamStorage :
+        IDisposable
+    {
+        readonly Dictionary<RecordKey, RecordHeader> _indexes =
+            new Dictionary<RecordKey, RecordHeader>(new RecordKeyComparer());
 
-		readonly Dictionary<Tuple<string, string>, RecordHeader> _indexes =
-			new Dictionary<Tuple<string, string>, RecordHeader>();
+        readonly Action<Stream> _primaryStreamCleanUp;
+        readonly Func<Stream> _primaryStreamFactory;
+        readonly Action<Stream> _tempStreamCleanUp;
+        readonly Func<Stream> _tempStreamFactory;
+        Stream _dataStream;
 
-		readonly Func<Stream> _primaryStreamFactory;
-		readonly Func<Stream> _tempStreamFactory;
-		readonly Action<Stream> _primaryStreamCleanUp;
-		readonly Action<Stream> _tempStreamCleanUp;
-		
-		public StreamStorage(Func<Stream> primaryStreamFactory, Func<Stream> tempStreamFactory, Action<Stream> primaryStreamCleanUp, Action<Stream> tempStreamCleanUp)
-		{
-			_primaryStreamFactory = primaryStreamFactory;
-			_tempStreamFactory = tempStreamFactory;
-			_primaryStreamCleanUp = primaryStreamCleanUp;
-			_tempStreamCleanUp = tempStreamCleanUp;
-		
-			_dataStream = _primaryStreamFactory();
+        public StreamStorage(Func<Stream> primaryStreamFactory, Func<Stream> tempStreamFactory,
+                             Action<Stream> primaryStreamCleanUp, Action<Stream> tempStreamCleanUp)
+        {
+            _primaryStreamFactory = primaryStreamFactory;
+            _tempStreamFactory = tempStreamFactory;
+            _primaryStreamCleanUp = primaryStreamCleanUp;
+            _tempStreamCleanUp = tempStreamCleanUp;
 
-			// reset stream to the start
-			_dataStream.SeekStart();
+            _dataStream = _primaryStreamFactory();
 
-			if (_dataStream.Length > 0)
-				ReadIndex();
-			else
-				WriteNewHeader();
-		}
+            // reset stream to the start
+            _dataStream.SeekStart();
 
-		public StreamHeader Header { get; set; }
+            if (_dataStream.Length > 0)
+                ReadIndex();
+            else
+                WriteNewHeader();
+        }
 
-		public Tuple<string, string>[] Keys
-		{
-			get { return _indexes.Keys.ToArray(); }
-		}
+        public StreamHeader Header { get; set; }
 
-		public void Dispose()
-		{
-			_dataStream.Close();
-		}
+        public RecordKey[] Keys
+        {
+            get { return _indexes.Keys.ToArray(); }
+        }
 
-		void WriteNewHeader()
-		{
-			Header = new StreamHeader
-				{
-					Version = 1
-				};
+        public void Dispose()
+        {
+            _dataStream.Close();
+        }
 
-			_dataStream.WriteStreamHeader(Header);
-		}
+        void WriteNewHeader()
+        {
+            Header = new StreamHeader
+                {
+                    Version = 1
+                };
 
-		void LoadHeader()
-		{
-			Header = _dataStream.ReadStreamHeader();
-		}
+            _dataStream.WriteStreamHeader(Header);
+        }
 
-		public void Store(string table, string key, byte[] data)
-		{
-			var header = StoreToStream(_dataStream, key, table, data, StorageActions.Store);
+        void LoadHeader()
+        {
+            Header = _dataStream.ReadStreamHeader();
+        }
 
-			IndexRecord(header);
-		}
+        public void Store(string table, string key, byte[] data)
+        {
+            RecordHeader header = StoreToStream(_dataStream, key, table, data, StorageActions.Store);
 
-		RecordHeader StoreToStream(Stream dataStream, string key, string table, byte[] data, StorageActions storageAction)
-		{
-			var recordSize = data == null ? 0 : data.Length;
-			var header = new RecordHeader
-				{
-					Key = key,
-					Table = table,
-					Action = storageAction,
-					RecordSize = recordSize
-				};
+            IndexRecord(header);
+        }
 
-			dataStream.SeekEnd();
-			dataStream.WriteRecordHeader(header);
+        RecordHeader StoreToStream(Stream dataStream, string key, string table, byte[] data,
+                                   StorageActions storageAction)
+        {
+            int recordSize = data == null ? 0 : data.Length;
+            var header = new RecordHeader
+                {
+                    Key = key,
+                    Table = table,
+                    Action = storageAction,
+                    RecordSize = recordSize
+                };
 
-			header.RecordLocation = dataStream.Position;
+            dataStream.SeekEnd();
+            dataStream.WriteRecordHeader(header);
 
-			if (data != null)
-				dataStream.Write(data);
+            header.RecordLocation = dataStream.Position;
 
-			return header;
-		}
+            if (data != null)
+                dataStream.Write(data);
 
-		public void Remove(string table, string key)
-		{
-			var header = StoreToStream(_dataStream, key, table, null, StorageActions.Delete);
-		
-			IndexRecord(header);
-		}
+            return header;
+        }
 
-		public void ReadIndex()
-		{
-			LoadHeader();
+        public void Remove(string table, string key)
+        {
+            RecordHeader header = StoreToStream(_dataStream, key, table, null, StorageActions.Delete);
 
-			while (_dataStream.Position < _dataStream.Length)
-			{
-				RecordHeader header = _dataStream.ReadRecordHeader();
-				if (header != null)
-					IndexRecord(header);
-			}
-		}
+            IndexRecord(header);
+        }
 
-		void IndexRecord(RecordHeader header)
-		{
-			WriteHeaderToIndexForStream(header, _indexes, _dataStream);
-		}
+        public void ReadIndex()
+        {
+            LoadHeader();
 
-		void WriteHeaderToIndexForStream(RecordHeader header, Dictionary<Tuple<string, string>, RecordHeader> index, Stream stream)
-		{
-			var key = new Tuple<string, string>(header.Table, header.Key);
+            while (_dataStream.Position < _dataStream.Length)
+            {
+                RecordHeader header = _dataStream.ReadRecordHeader();
+                if (header != null)
+                    IndexRecord(header);
+            }
+        }
 
-			if (header.Action == StorageActions.Store)
-			{
-				if (!index.ContainsKey(key))
-					index.Add(key, header);
-				else
-					index[key] = header;
+        void IndexRecord(RecordHeader header)
+        {
+            WriteHeaderToIndexForStream(header, _indexes, _dataStream);
+        }
 
-				stream.MovePositionForward(header.RecordSize);
-			}
-			else if (header.Action == StorageActions.Delete)
-			{
-				if (index.ContainsKey(key))
-					index.Remove(key);
-			}
-		}
+        void WriteHeaderToIndexForStream(RecordHeader header, Dictionary<RecordKey, RecordHeader> index,
+                                         Stream stream)
+        {
+            var key = new RecordKey(header.Table, header.Key);
 
-		public byte[] Read(string table, string itemKey)
-		{
-			var key = new Tuple<string, string>(table, itemKey);
+            if (header.Action == StorageActions.Store)
+            {
+                if (!index.ContainsKey(key))
+                    index.Add(key, header);
+                else
+                    index[key] = header;
 
-			if (_indexes.ContainsKey(key))
-			{
-				RecordHeader header = _indexes[key];
+                stream.MovePositionForward(header.RecordSize);
+            }
+            else if (header.Action == StorageActions.Delete)
+            {
+                if (index.ContainsKey(key))
+                    index.Remove(key);
+            }
+        }
 
-				return ReadFromStream(_dataStream, header);
-			}
+        public byte[] Read(string table, string itemKey)
+        {
+            var key = new RecordKey(table, itemKey);
 
-			return null;
-		}
+            if (_indexes.ContainsKey(key))
+            {
+                RecordHeader header = _indexes[key];
 
-		byte[] ReadFromStream(Stream dataStream, RecordHeader header)
-		{
-			dataStream.SeekLocation(header.RecordLocation);
-			return dataStream.Read(header.RecordSize);
-		}
+                return ReadFromStream(_dataStream, header);
+            }
 
-		public void CleanUp()
-		{
-			var tempStream = _tempStreamFactory();
-			tempStream.WriteStreamHeader(Header);
-			var newIndex = new Dictionary<Tuple<string, string>, RecordHeader>();
+            return null;
+        }
 
-			foreach(var kvp in _indexes)
-			{
-				var data = ReadFromStream(_dataStream, kvp.Value);
-				var header = StoreToStream(tempStream, kvp.Value.Key, kvp.Value.Table, data, StorageActions.Store);
-				WriteHeaderToIndexForStream(header, newIndex, tempStream);
-			}
+        byte[] ReadFromStream(Stream dataStream, RecordHeader header)
+        {
+            dataStream.SeekLocation(header.RecordLocation);
+            return dataStream.Read(header.RecordSize);
+        }
 
-			_primaryStreamCleanUp(_dataStream);
-			_dataStream = _primaryStreamFactory();
-			_dataStream.WriteStreamHeader(Header);
-			
-			foreach (var kvp in newIndex)
-			{
-				var data = ReadFromStream(tempStream, kvp.Value);
-				StoreToStream(_dataStream, kvp.Value.Key, kvp.Value.Table, data, StorageActions.Store);
-			}
+        public void CleanUp()
+        {
+            Stream tempStream = _tempStreamFactory();
+            tempStream.WriteStreamHeader(Header);
+            var newIndex = new Dictionary<RecordKey, RecordHeader>(new RecordKeyComparer());
 
-			_tempStreamCleanUp(tempStream);
+            foreach (var kvp in _indexes)
+            {
+                byte[] data = ReadFromStream(_dataStream, kvp.Value);
+                RecordHeader header = StoreToStream(tempStream, kvp.Value.Key, kvp.Value.Table, data,
+                                                    StorageActions.Store);
+                WriteHeaderToIndexForStream(header, newIndex, tempStream);
+            }
 
-			_indexes.Clear();
+            _primaryStreamCleanUp(_dataStream);
+            _dataStream = _primaryStreamFactory();
+            _dataStream.WriteStreamHeader(Header);
 
-			_dataStream.SeekStart();
+            foreach (var kvp in newIndex)
+            {
+                byte[] data = ReadFromStream(tempStream, kvp.Value);
+                StoreToStream(_dataStream, kvp.Value.Key, kvp.Value.Table, data, StorageActions.Store);
+            }
 
-			ReadIndex();
-		}
-	}
+            _tempStreamCleanUp(tempStream);
+
+            _indexes.Clear();
+
+            _dataStream.SeekStart();
+
+            ReadIndex();
+        }
+    }
 }
