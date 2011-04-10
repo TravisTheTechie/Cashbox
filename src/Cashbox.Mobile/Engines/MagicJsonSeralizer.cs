@@ -31,7 +31,7 @@ namespace Cashbox.Engines
             {
                 var serializer = new DataContractJsonSerializer(objectToSerialize.GetType());
                 serializer.WriteObject(ms, objectToSerialize);
-                return ms.GetBuffer();
+                return ms.ToArray();
             }
         }
 
