@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2010-2011 Travis Smith
+// Copyright (c) 2010-2011 Travis Smith
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -17,33 +17,13 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
-namespace Cashbox.Wp7
+namespace Cashbox
 {
-    using System.IO;
-    using System.Runtime.Serialization.Json;
+    using System;
 
 
-    public class MagicJsonSeralizer
+    public interface Engine :
+        IDisposable
     {
-        public static byte[] Serialize(object objectToSerialize)
-        {
-            using (var ms = new MemoryStream())
-            {
-                var serializer = new DataContractJsonSerializer(objectToSerialize.GetType());
-                serializer.WriteObject(ms, objectToSerialize);
-                return ms.GetBuffer();
-            }
-        }
-
-        public static T Deserialize<T>(byte[] data)
-            where T : class
-        {
-            using (var ms = new MemoryStream(data))
-            {
-                var serializer = new DataContractJsonSerializer(typeof(T));
-
-                return (T)serializer.ReadObject(ms);
-            }
-        }
     }
 }

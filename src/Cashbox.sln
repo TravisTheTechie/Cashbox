@@ -5,7 +5,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cashbox", "Cashbox\Cashbox.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cashbox.Specs", "Cashbox.Specs\Cashbox.Specs.csproj", "{5DBED87D-610C-48E8-BD4D-1733200217F7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cashbox.Wp7", "Cashbox.Wp7\Cashbox.Wp7.csproj", "{F091B340-A760-4175-946C-EC727F874A8B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cashbox.Mobile", "Cashbox.Mobile\Cashbox.Mobile.csproj", "{F091B340-A760-4175-946C-EC727F874A8B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

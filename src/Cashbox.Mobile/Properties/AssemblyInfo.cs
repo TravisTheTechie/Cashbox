@@ -5,12 +5,12 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("Cashbox.Wp7")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyTitle("Cashbox.Mobile")]
+[assembly: AssemblyDescription("Inprocess document store.")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("Microsoft")]
-[assembly: AssemblyProduct("Cashbox.Wp7")]
-[assembly: AssemblyCopyright("Copyright © Microsoft 2011")]
+[assembly: AssemblyCompany("Travis Smith")]
+[assembly: AssemblyProduct("Cashbox")]
+[assembly: AssemblyCopyright("Copyright © Travis Smith 2010-2011")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

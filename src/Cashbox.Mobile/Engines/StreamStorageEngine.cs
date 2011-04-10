@@ -17,26 +17,28 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
-namespace Cashbox.Wp7
+namespace Cashbox.Engines
 {
     using System;
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
-    using Engines.FileStorage;
+    using FileStorage;
 
 
     public class StreamStorageEngine :
-        IDisposable
+        DocumentSession,
+        Engine
     {
         readonly StreamStorage _storage;
         int _changeCounter;
 
 
-        public StreamStorageEngine(Func<Stream> primaryStreamFactory, Func<Stream> tempStreamFactory)
+        public StreamStorageEngine(Func<Stream> primaryStreamFactory, Func<Stream> tempStreamFactory, 
+            Action<Stream> primaryStreamCleanUp, Action<Stream> tempStreamCleanUp)
         {
             CompactionFrequency = 250;
-            _storage = new StreamStorage(primaryStreamFactory, tempStreamFactory, s => s.Close(), s => s.Close());
+            _storage = new StreamStorage(primaryStreamFactory, tempStreamFactory, primaryStreamCleanUp, tempStreamCleanUp);
         }
 
         protected int CompactionFrequency { get; set; }
@@ -53,11 +55,24 @@ namespace Cashbox.Wp7
                 _storage.CleanUp();
         }
 
-        public T RetrieveValue<T>(string key)
+        public T Retrieve<T>(string key)
             where T : class
         {
             byte[] data = _storage.Read(typeof(T).ToString(), key);
             return MagicJsonSeralizer.Deserialize<T>(data);
+        }
+
+        public T RetrieveWithDefault<T>(string key, Func<T> defaultCreation) where T : class
+        {
+            T possible = Retrieve<T>(key);
+            
+            if (possible == null)
+            {
+                possible = defaultCreation();
+                Store(key, possible);
+            }
+
+            return possible;
         }
 
         public void Store<T>(string key, T value)
@@ -68,13 +83,20 @@ namespace Cashbox.Wp7
             IncrementChangeCounter();
         }
 
+        public void Delete<T>(string key)
+            where T : class
+        {
+            _storage.Remove(typeof(T).ToString(), key);
+            IncrementChangeCounter();
+        }
+
         public IEnumerable<T> List<T>()
             where T : class
         {
             return _storage
                 .Keys
                 .Where(x => x.Table == typeof(T).ToString())
-                .Select(x => RetrieveValue<T>(x.Key))
+                .Select(x => Retrieve<T>(x.Key))
                 .AsEnumerable();
         }
     }
