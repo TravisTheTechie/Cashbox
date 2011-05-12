@@ -38,6 +38,9 @@ namespace Cashbox.Engines
         public static T Deserialize<T>(byte[] data)
             where T : class
         {
+            if (data == null)
+                return null;
+
             using (var ms = new MemoryStream(data))
             {
                 var serializer = new DataContractJsonSerializer(typeof(T));

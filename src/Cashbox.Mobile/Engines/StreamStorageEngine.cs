@@ -59,7 +59,7 @@ namespace Cashbox.Engines
             where T : class
         {
             byte[] data = _storage.Read(typeof(T).ToString(), key);
-            return MagicJsonSeralizer.Deserialize<T>(data);
+            return data == null ? null : MagicJsonSeralizer.Deserialize<T>(data);
         }
 
         public T RetrieveWithDefault<T>(string key, Func<T> defaultCreation) where T : class
