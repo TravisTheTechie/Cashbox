@@ -11,6 +11,10 @@ Options and finding "Code Style Sharing" under Languages, Common. Using the
 "Not shared, per solution, stored in a file:" and browse to 
 src\Cashbox.Resharper.xml.
 
+## Mailing List
+
+http://groups.google.com/group/cashbox-discuss
+
 ## License
 
 This software is licensed under the MIT license. You can see the terms in 
